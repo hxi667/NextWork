@@ -98,8 +98,6 @@ class CollateFn(object):
                     if seq_len == 0:
                         get_msg_mgr().log_debug('Find no frames in the sequence %s-%s-%s.'
                                                 % (str(labs_batch[count]), str(typs_batch[count]), str(vies_batch[count])))
-                        # print('Find no frames in the sequence %s-%s-%s.'
-                        #        % (str(labs_batch[count]), str(typs_batch[count]), str(vies_batch[count])))
 
                     count += 1   
                     # 例: array([74, 64, 64, 52, 67, 65, 44, 74, 45, 55, 66, 74, 48, 46, 73, 62, 69, 71, 57, 41, 45, 52, 59, 69, 42, 68, 48, 57, 74, 49])

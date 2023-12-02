@@ -27,7 +27,6 @@ from data.transform import get_transform
 from data.dataloader import get_loader
 
 # ================= Arugments ================ #
-
 parser = argparse.ArgumentParser(description='Training Gait with PyTorch')
 
 #  ============================================================
@@ -43,7 +42,6 @@ parser.add_argument('--d_lr', default=0.1, type=float, help='discriminator learn
 parser.add_argument('--teachers', default='[\'shufflenetg2\']', type=str, help='teacher networks type')  # eval()
 parser.add_argument('--student', default='shufflenetg2', type=str, help='student network type')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
-# parser.add_argument('--gpu_id', default='3', type=str, help='gpu id')
 parser.add_argument('--gamma', default='[1,1,1,1,1]', type=str, help='')  # eval()
 parser.add_argument('--eta', default='[1,1,1,1,1]', type=str, help='')  # eval()
 parser.add_argument('--loss', default="ce", type=str, help='loss selection')
@@ -70,7 +68,6 @@ parser.add_argument('--pool_out', default="max", type=str, help='the type of poo
 # run config
 parser.add_argument('--seed', type=int, default=17)
 parser.add_argument('--outdir', type=str, default="results")
-# parser.add_argument('--num_workers', type=int, default=7)
 
 
 # optim config
@@ -82,52 +79,10 @@ parser.add_argument('--momentum', type=float, default=0.9)
 parser.add_argument('--nesterov', type=bool, default=True)  # SGD优化器的参数，enables Nesterov momentum
 parser.add_argument('--lr_min', type=float, default=0)
 
-
 args = parser.parse_args()
 
 
-# ================= Config Collection ================ #
-
-model_config = OrderedDict([
-    ('depth', args.depth),
-    ('base_channels', args.base_channels),
-    ('input_shape',  eval(args.input_shape)), 
-    ('n_classes', args.n_classes),
-    ('out_dims', args.out_dims),
-    ('fc_out', args.fc_out),
-    ('pool_out', args.pool_out)
-])
-
-optim_config = OrderedDict([
-    ('epochs', args.epochs),
-    ('batch_size', args.batch_size),
-    ('base_lr', args.base_lr),
-    ('weight_decay', args.weight_decay),
-    ('momentum', args.momentum),
-    ('nesterov', args.nesterov),
-    ('lr_min', args.lr_min),
-])
-
-data_config = OrderedDict([
-    ('dataset', args.dataset),
-])
-
-run_config = OrderedDict([
-    ('seed', args.seed),
-    ('outdir', args.outdir),
-    # ('num_workers', args.num_workers),
-])
-
-config = OrderedDict([
-    ('model_config', model_config),
-    ('optim_config', optim_config),
-    ('data_config', data_config),
-    ('run_config', run_config),
-])
-
-print(args)
-
-# 初始化 SummaryWriter 和 logger(向 tensorboard, console 和 file 输出log信息)
+# 初始化 SummaryWriter 和 logger(向 tensorboard, console 和 file 输出log信息)， 随机种子
 def initialization(cfgs, training):
     # 获得 MessageManager 类的实例对象
     msg_mgr = get_msg_mgr()
@@ -162,22 +117,57 @@ if __name__ == '__main__':
     with open(args.cfgs, 'r') as stream:
         cfgs = yaml.safe_load(stream)
      
-    
     # ================= Initialization ================ #
-    # os.environ['CUDA_VISIBLE_DEVICES']=args.gpu_id
     # device = 'cuda'
     
-    # 初始化 SummaryWriter and logger
+    # 初始化 SummaryWriter and logger， 随机种子
     initialization(cfgs, training=True)
     
     best_acc = 0  # best test accuracy
     start_epoch = 0  # start from epoch 0 or last checkpoint epoch
-
-
+    
     msg_mgr = get_msg_mgr()
 
+# ================= Config Collection ================ #
+    model_config = OrderedDict([
+        ('depth', args.depth),
+        ('base_channels', args.base_channels),
+        ('input_shape',  eval(args.input_shape)), 
+        ('n_classes', args.n_classes),
+        ('out_dims', args.out_dims),
+        ('fc_out', args.fc_out),
+        ('pool_out', args.pool_out)
+    ])
+
+    optim_config = OrderedDict([
+        ('epochs', args.epochs),
+        ('batch_size', args.batch_size),
+        ('base_lr', args.base_lr),
+        ('weight_decay', args.weight_decay),
+        ('momentum', args.momentum),
+        ('nesterov', args.nesterov),
+        ('lr_min', args.lr_min),
+    ])
+
+    data_config = OrderedDict([
+        ('dataset', args.dataset),
+    ])
+
+    run_config = OrderedDict([
+        ('seed', args.seed),
+        ('outdir', args.outdir),
+    ])
+
+    config = OrderedDict([
+        ('model_config', model_config),
+        ('optim_config', optim_config),
+        ('data_config', data_config),
+        ('run_config', run_config),
+    ])
+
+    msg_mgr.log_info(args)
+
     # ================= Data Loader ================ #
-    # print('==> ==> Preparing data..')
     msg_mgr.log_info('==> ==> Preparing data..')
 
     transform_train = get_transform(cfgs['trainer_cfg']['transform'])

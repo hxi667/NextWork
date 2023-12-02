@@ -111,35 +111,22 @@ class DataSet(tordata.Dataset):
         def log_pid_list(pid_list):
             if len(pid_list) >= 3:
                 msg_mgr.log_info('[%s, %s, ..., %s]' %
-                                 (pid_list[0], pid_list[1], pid_list[-1]))
-                # print('[%s, %s, ..., %s]' %
-                #                  (pid_list[0], pid_list[1], pid_list[-1]))
+                                 (pid_list[0], pid_list[1], pid_list[-1]))             
             else:
                 msg_mgr.log_info(pid_list)
-                # print(pid_list)
+                
 
         if len(miss_pids) > 0:
-            msg_mgr.log_debug('-------- Miss Pid List --------')
+            msg_mgr.log_debug('Miss Pid List: %s' % miss_pids)
             msg_mgr.log_debug(miss_pids)
-            # print('-------- Miss Pid List --------')
-            # print(miss_pids)
-        # if training:
-        #     msg_mgr.log_info("-------- Train Pid List --------")
-        #     log_pid_list(train_set)
-        # else:
-        #     msg_mgr.log_info("-------- Test Pid List --------")
-        #     log_pid_list(test_set)
 
-        
-        msg_mgr.log_info("-------- Train Pid List --------")
-        log_pid_list(train_set)
-    
-        msg_mgr.log_info("-------- Test Pid List --------")
-        log_pid_list(test_set)
-        # print("-------- Train Pid List --------")
-        # log_pid_list(train_set)
-        # print("-------- Test Pid List --------")
-        # log_pid_list(test_set)
+        if training:
+            msg_mgr.log_info('Train Pid List: ')
+            log_pid_list(train_set)
+        else:
+            msg_mgr.log_info("Test Pid List: ")
+            log_pid_list(test_set)
+
 
         #  返回 seqs_info_list 。例: seqs_info_list[0] = ['001', 'bg-01', '000', ['./001/bg-01/000/000-rgbs.pkl', './001/bg-01/000/000-sils.pkl', '...']] 
         def get_seqs_info_list(label_set):
@@ -162,7 +149,6 @@ class DataSet(tordata.Dataset):
                         else:
                             msg_mgr.log_debug(
                                 'Find no .pkl file in %s-%s-%s.' % (lab, typ, vie))
-                            # print('Find no .pkl file in %s-%s-%s.' % (lab, typ, vie))
             return seqs_info_list
 
         self.seqs_info = get_seqs_info_list(
