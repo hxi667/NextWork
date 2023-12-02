@@ -1,0 +1,44 @@
+data_cfg:
+  dataset_name: CASIA-B
+  dataset_root: /root/data5/hxi/GaitRecognition/GaitDB/CASIA-B/CASIA-B-pkl
+  dataset_partition: ./datasets/CASIA-B/CASIA-B.json
+  num_workers: 0
+  # remove_no_gallery: false
+  # test_dataset_name: CASIA-B
+  cache: true
+
+
+trainer_cfg:
+  transform:
+  - type: Compose
+    trf_cfg:
+      - type: BaseSilCuttingTransform
+      - type: RandomRotate
+        prob: 0.3
+      - type: RandomErasing
+        prob: 0.3
+  sampler:
+    batch_shuffle: true
+    batch_size:
+      - 8
+      - 8
+    frames_num_fixed: 30
+    frames_skip_num: 0
+    sample_type: fixed_ordered
+    type: TripletSampler
+  log_iter: 100
+  restore_hint: 80000 # int值表示恢复的checkpoint的迭代次数；str值表示恢复的checkpoint的路径
+  optimizer_reset: true
+  scheduler_reset: true
+  save_name: GaitGL
+
+
+evaluator_cfg:
+  transform:
+    - type: BaseSilCuttingTransform  
+  sampler:
+    batch_size: 8 
+    sample_type: all_ordered
+    type: InferenceSampler
+  restore_hint: 80000
+  save_name: GaitGL

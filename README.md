@@ -1,8 +1,8 @@
-# MEAL: Multi-Model Ensemble via Adversarial Learning
+# NextWork: NextWorkNextWorkNextWorkNextWorkNextWork
 
 This is the official `PyTorch` implementation for paper:
 
-**[MEAL: Multi-Model Ensemble via Adversarial Learning](https://arxiv.org/abs/1812.02425)** (AAAI 2019, **Oral**).
+**[NextWorkNextWorkNextWorkNextWorkNextWork](https://arxiv.org/abs/1812.02425)** (AAAI 2019, **Oral**).
 
 [Zhiqiang Shen](http://zhiqiangshen.com)\*, [Zhankui He](https://aaronheee.github.io/)\*, [Xiangyang Xue](https://scholar.google.com/citations?user=DTbhX6oAAAAJ&hl=en).
 
@@ -13,7 +13,7 @@ The student and teacher networks we implemented are listed in `\models`, and it 
 If you find this helps your research, please cite:
 
 	@inproceedings{shen2019MEAL,
-		title = {MEAL: Multi-Model Ensemble via Adversarial Learning},
+		title = {NextWorkNextWorkNextWorkNextWorkNextWork},
 		author = {Shen, Zhiqiang and He, Zhankui and Xue, Xiangyang},
 		booktitle = {AAAI},
 		year = {2019}
