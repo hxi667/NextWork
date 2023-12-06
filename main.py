@@ -17,8 +17,7 @@ import argparse
 import numpy as np
 
 from models import *
-from models import discriminator
-# from utils import progress_bar, get_model, get_msg_mgr
+from models import discriminator, model_utils
 from utils import get_msg_mgr, init_seeds
 from loss import *
 
@@ -64,11 +63,9 @@ parser.add_argument('--out_dims', default="[5000,1000,500,200,10]", type=str, he
 parser.add_argument('--fc_out', default=1, type=int, help='if immediate output from fc-layer')
 parser.add_argument('--pool_out', default="max", type=str, help='the type of pooling layer of output')
 
-
 # run config
 parser.add_argument('--seed', type=int, default=17)
 parser.add_argument('--outdir', type=str, default="results")
-
 
 # optim config
 parser.add_argument('--epochs', type=int, default=1800)
@@ -105,8 +102,6 @@ def initialization(cfgs, training):
     
 
 
-
-
 if __name__ == '__main__':
     torch.distributed.init_process_group('nccl', init_method='env://')
     if torch.distributed.get_world_size() != torch.cuda.device_count():
@@ -128,45 +123,6 @@ if __name__ == '__main__':
     
     msg_mgr = get_msg_mgr()
 
-# ================= Config Collection ================ #
-    model_config = OrderedDict([
-        ('depth', args.depth),
-        ('base_channels', args.base_channels),
-        ('input_shape',  eval(args.input_shape)), 
-        ('n_classes', args.n_classes),
-        ('out_dims', args.out_dims),
-        ('fc_out', args.fc_out),
-        ('pool_out', args.pool_out)
-    ])
-
-    optim_config = OrderedDict([
-        ('epochs', args.epochs),
-        ('batch_size', args.batch_size),
-        ('base_lr', args.base_lr),
-        ('weight_decay', args.weight_decay),
-        ('momentum', args.momentum),
-        ('nesterov', args.nesterov),
-        ('lr_min', args.lr_min),
-    ])
-
-    data_config = OrderedDict([
-        ('dataset', args.dataset),
-    ])
-
-    run_config = OrderedDict([
-        ('seed', args.seed),
-        ('outdir', args.outdir),
-    ])
-
-    config = OrderedDict([
-        ('model_config', model_config),
-        ('optim_config', optim_config),
-        ('data_config', data_config),
-        ('run_config', run_config),
-    ])
-
-    msg_mgr.log_info(args)
-
     # ================= Data Loader ================ #
     msg_mgr.log_info('==> ==> Preparing data..')
 
@@ -176,26 +132,23 @@ if __name__ == '__main__':
     train_loader = get_loader(cfgs, train=True)
     test_loader = get_loader(cfgs, train=False)
     
-    optim_config['steps_per_epoch'] = len(train_loader)
+    cfgs['data_cfg']['steps_per_epoch'] = len(train_loader)
 
     # ================= Model Setup ================ #
-    args.teachers = eval(args.teachers) # eval(): str2list or str2dict or str2tuple
-
-    # print('==> ==> Training', args.student if args.name is None else args.name)
-    # print('==> ==> Building model..')
-    msg_mgr.log_info('==> ==> Training', args.student if args.name is None else args.name)
+    msg_mgr.log_info('==> ==> Training')
+    msg_mgr.log_info('Teachers: ' + str(cfgs['model_cfg']['teachers']))
+    msg_mgr.log_info('Student: ' + cfgs['model_cfg']['student']) 
     msg_mgr.log_info('==> ==> Building model..')
 
     # get models as teachers and students
-    teachers, student = get_model(args, config, device="cuda")
+    teachers, student = model_utils.get_teachers_student(cfgs['model_cfg'])
 
-    # print("==> ==> Teacher(s): ", " ".join([teacher.__name__ for teacher in teachers]))
-    # print("==> ==> Student: ", args.student)
+
     msg_mgr.log_info("==> ==> Teacher(s): ", " ".join([teacher.__name__ for teacher in teachers]))
     msg_mgr.log_info("==> ==> Student: ", args.student)
 
     dims = [student.out_dims[i] for i in eval(args.out_layer)]
-    # print("dims:", dims)
+
     msg_mgr.log_info("dims:", dims)
 
     update_parameters = [{'params': student.parameters()}]

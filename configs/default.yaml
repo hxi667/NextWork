@@ -6,6 +6,7 @@ data_cfg:
   # remove_no_gallery: false
   # test_dataset_name: CASIA-B
   cache: true
+  steps_per_epoch: 0
 
 
 trainer_cfg:
@@ -42,3 +43,11 @@ evaluator_cfg:
     type: InferenceSampler
   restore_hint: 80000
   save_name: GaitGL
+
+model_cfg:
+  student: GaitGL
+  teachers:
+    - GaitSet
+    - GaitPart
+    - GaitGL
+    - Baseline_ResNet9

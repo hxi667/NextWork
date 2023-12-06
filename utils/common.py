@@ -6,6 +6,9 @@ import logging
 import torch
 import random
 import numpy as np
+import copy
+import torch.autograd as autograd
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 # NoOp 是一个空类，它的目的是在访问不存在的属性时返回一个无操作的函数
 class NoOp:
@@ -69,6 +72,9 @@ def get_attr_from(sources, name):
     except:
         return get_attr_from(sources[1:], name) if len(sources) > 1 else getattr(sources[0], name)
 
+# 如果 x 是 list 或者 tuple 类型, 返回 true
+def is_list_or_tuple(x):
+    return isinstance(x, (list, tuple))
 
 # 如果 x 是 list 或者 nn.ModuleList 类型, 返回 true
 def is_list(x):
@@ -90,10 +96,30 @@ def ts2np(x):
     return x.cpu().data.numpy()
 
 
+# tensor2variable 
+def ts2var(x, **kwargs):
+    return autograd.Variable(x, **kwargs).cuda()
+
+# numpy2variable
+def np2var(x, **kwargs):
+    return ts2var(torch.from_numpy(x), **kwargs)
+
+
+# list2variable
+def list2var(x, **kwargs):
+    return np2var(np.array(x), **kwargs)
+
+
 # mkdir
 def mkdir(path):
     if not os.path.exists(path):
         os.makedirs(path)
+
+
+# clone the module N times to form the nn.ModuleList
+def clones(module, N):
+    "Produce N identical layers."
+    return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
 
 
 # 初始化随机种子
@@ -109,3 +135,39 @@ def init_seeds(seed=0, cuda_deterministic=True):
     else:  # faster, less reproducible
         torch.backends.cudnn.deterministic = False
         torch.backends.cudnn.benchmark = True
+
+# 分布式
+def ddp_all_gather(features, dim=0, requires_grad=True):
+    '''
+        在分布式训练环境中实现 All-Gather 操作，确保每个设备上的模型都有完整的数据集信息
+        inputs: [n, ...]
+    '''
+
+    world_size = torch.distributed.get_world_size()
+    rank = torch.distributed.get_rank()
+    feature_list = [torch.ones_like(features) for _ in range(world_size)]
+    torch.distributed.all_gather(feature_list, features.contiguous())
+
+    if requires_grad:
+        feature_list[rank] = features
+    feature = torch.cat(feature_list, dim=dim)
+    return feature
+
+# https://github.com/pytorch/pytorch/issues/16885
+class DDPPassthrough(DDP):
+    def __getattr__(self, name):
+        try:
+            return super().__getattr__(name)
+        except AttributeError:
+            return getattr(self.module, name)
+
+
+# 返回一个经过分布式数据并行 (DDP) 化处理的 module
+def get_ddp_module(module, **kwargs):
+    # 检查输入 module 是否包含参数（权重和偏置等），如果没有，则直接返回原始 module
+    if len(list(module.parameters())) == 0: 
+        return module
+    device = torch.cuda.current_device()
+    module = DDPPassthrough(module, device_ids=[device], output_device=device,
+                            find_unused_parameters=False, **kwargs)
+    return module
