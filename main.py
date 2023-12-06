@@ -1,16 +1,10 @@
 from __future__ import print_function
 
 import torch
-import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-import torch.backends.cudnn as cudnn
 
-import torchvision
-import torchvision.transforms as transforms
 
-from collections import OrderedDict
-import random
 import yaml
 import os
 import argparse
@@ -38,8 +32,6 @@ parser.add_argument('--log_to_file', action='store_true',
 
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parser.add_argument('--d_lr', default=0.1, type=float, help='discriminator learning rate')
-parser.add_argument('--teachers', default='[\'shufflenetg2\']', type=str, help='teacher networks type')  # eval()
-parser.add_argument('--student', default='shufflenetg2', type=str, help='student network type')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
 parser.add_argument('--gamma', default='[1,1,1,1,1]', type=str, help='')  # eval()
 parser.add_argument('--eta', default='[1,1,1,1,1]', type=str, help='')  # eval()
@@ -52,7 +44,6 @@ parser.add_argument('--teacher_eval', default=0, type=int, help='use teacher.eva
 
 parser.add_argument('--grl', type=bool, default=False, help="gradient reverse layer") # 反向传播时候梯度反向层
 
-parser.add_argument('--dataset', default="CASIA-B", type=str, help='the name of dataset')
 
 # model config
 parser.add_argument('--depth', type=int, default=26)
@@ -79,15 +70,13 @@ parser.add_argument('--lr_min', type=float, default=0)
 args = parser.parse_args()
 
 
-# 初始化 SummaryWriter 和 logger(向 tensorboard, console 和 file 输出log信息)， 随机种子
+# init SummaryWriter and logger(to tensorboard, console and file print log info)， random seeds
 def initialization(cfgs, training):
     # 获得 MessageManager 类的实例对象
     msg_mgr = get_msg_mgr()
     engine_cfg = cfgs['trainer_cfg'] if training else cfgs['evaluator_cfg'] 
-    # file 默认的输出路径: output/<dataset>/<model>/<save_name>/
-    # output_path = os.path.join('output/', cfgs['data_cfg']['dataset_name'],
-    #                            cfgs['model_cfg']['model'], engine_cfg['save_name'])
-    output_path = os.path.join('output/', cfgs['data_cfg']['dataset_name'], engine_cfg['save_name'])
+
+    output_path = os.path.join('output/', cfgs['data_cfg']['dataset_name'], engine_cfg['exp_name'], 'Student_'+ cfgs['model_cfg']['student'][0]['name'])
     if training:
         # 初始化 SummaryWriter 和 logger
         msg_mgr.init_manager(output_path, args.log_to_file, engine_cfg['log_iter'],
@@ -113,9 +102,7 @@ if __name__ == '__main__':
         cfgs = yaml.safe_load(stream)
      
     # ================= Initialization ================ #
-    # device = 'cuda'
-    
-    # 初始化 SummaryWriter and logger， 随机种子
+    # init SummaryWriter and logger， random seeds
     initialization(cfgs, training=True)
     
     best_acc = 0  # best test accuracy
@@ -124,7 +111,7 @@ if __name__ == '__main__':
     msg_mgr = get_msg_mgr()
 
     # ================= Data Loader ================ #
-    msg_mgr.log_info('==> ==> Preparing data..')
+    msg_mgr.log_info('==> ==> Preparing Data..')
 
     transform_train = get_transform(cfgs['trainer_cfg']['transform'])
     transform_test = get_transform(cfgs['evaluator_cfg']['transform'])
@@ -135,10 +122,12 @@ if __name__ == '__main__':
     cfgs['data_cfg']['steps_per_epoch'] = len(train_loader)
 
     # ================= Model Setup ================ #
-    msg_mgr.log_info('==> ==> Training')
-    msg_mgr.log_info('Teachers: ' + str(cfgs['model_cfg']['teachers']))
-    msg_mgr.log_info('Student: ' + cfgs['model_cfg']['student']) 
-    msg_mgr.log_info('==> ==> Building model..')
+    msg_mgr.log_info('==> ==> Training..')
+    msg_mgr.log_info('Teachers:')
+    msg_mgr.log_info(str([dic['name'] for dic in cfgs['model_cfg']['teachers']]))
+    msg_mgr.log_info('Student:')
+    msg_mgr.log_info(str([dic['name'] for dic in cfgs['model_cfg']['student']])) 
+    msg_mgr.log_info('==> ==> Building Model..')
 
     # get models as teachers and students
     teachers, student = model_utils.get_teachers_student(cfgs['model_cfg'])

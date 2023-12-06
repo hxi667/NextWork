@@ -28,10 +28,10 @@ trainer_cfg:
     sample_type: fixed_ordered
     type: TripletSampler
   log_iter: 100
-  restore_hint: 80000 # int值表示恢复的checkpoint的迭代次数；str值表示恢复的checkpoint的路径
   optimizer_reset: true
   scheduler_reset: true
-  save_name: GaitGL
+  exp_name: Exp_Name
+  restore_hint: 0
 
 
 evaluator_cfg:
@@ -41,13 +41,19 @@ evaluator_cfg:
     batch_size: 8 
     sample_type: all_ordered
     type: InferenceSampler
-  restore_hint: 80000
-  save_name: GaitGL
+  exp_name: Exp_Name
+  restore_hint: 0
 
 model_cfg:
-  student: GaitGL
+  student: 
+    - name: GaitGL
   teachers:
-    - GaitSet
-    - GaitPart
-    - GaitGL
-    - Baseline_ResNet9
+    - name: GaitSet
+      restore_hint: 40000
+    - name: GaitPart
+      restore_hint: 120000
+    - name: GaitGL
+      restore_hint: 80000
+    - name: Baseline_ResNet9
+      restore_hint: 60000
+  

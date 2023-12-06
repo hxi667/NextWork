@@ -2,18 +2,18 @@ import torch
 import copy
 import torch.nn as nn
 
-from models.base_model import BaseModel
 from models.modules import SeparateFCs, BasicConv2d, SetBlockWrapper, HorizontalPoolingPyramid, PackSequenceWrapper
 
 
-class GaitSet(BaseModel):
+class GaitSet(nn.Module):
     """
         GaitSet: Regarding Gait as a Set for Cross-View Gait Recognition
         Arxiv:  https://arxiv.org/abs/1811.06186
         Github: https://github.com/AbnerHqC/GaitSet
     """
 
-    def build_network(self, model_cfg):
+    def __init__(self, model_cfg):
+        super(GaitSet, self).__init__()
         in_c = model_cfg['in_channels']
         self.set_block1 = nn.Sequential(BasicConv2d(in_c[0], in_c[1], 5, 1, 2),
                                         nn.LeakyReLU(inplace=True),

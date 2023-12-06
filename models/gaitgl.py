@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from models.base_model import BaseModel
+# from models.base_model import BaseModel
 from models.modules import SeparateFCs, BasicConv3d, PackSequenceWrapper, SeparateBNNecks
 
 
@@ -61,20 +61,18 @@ class GeMHPP(nn.Module):
         return torch.cat(features, -1)
 
 
-class GaitGL(BaseModel):
+class GaitGL(nn.Module):
     """
         GaitGL: Gait Recognition via Effective Global-Local Feature Representation and Local Temporal Aggregation
         Arxiv : https://arxiv.org/pdf/2011.01461.pdf
     """
 
-    def __init__(self, *args, **kargs):
-        super(GaitGL, self).__init__(*args, **kargs)
+    def __init__(self, model_cfg, dataset_name="CASIA-B"):
+        super(GaitGL, self).__init__()
 
-    def build_network(self, model_cfg):
         in_c = model_cfg['channels']
         class_num = model_cfg['class_num']
-        dataset_name = self.cfgs['data_cfg']['dataset_name']
-
+        
         if dataset_name in ['OUMVLP', 'GREW']:
             # For OUMVLP and GREW
             self.conv3d = nn.Sequential(
@@ -148,11 +146,10 @@ class GaitGL(BaseModel):
             self.Head1 = SeparateFCs(64, in_c[-1], class_num)
             self.Bn_head = True
 
-    def forward(self, inputs):
+    def forward(self, inputs, training=True):
         ipts, labs, _, _, seqL = inputs
-        # self.training is defined in the parent class
-        seqL = None if not self.training else seqL
-        if not self.training and len(labs) != 1:
+        seqL = None if not training else seqL
+        if not training and len(labs) != 1:
             raise ValueError(
                 'The input size of each GPU must be 1 in testing mode, but got {}!'.format(len(labs)))
         
@@ -206,4 +203,4 @@ def gaitGL():
         'channels': [32, 64, 128],
         'class_num': 74
     }
-    return GaitGL(model_cfg)
+    return GaitGL(model_cfg, "CASIA-B")

@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
-from models.base_model import BaseModel
 from models.modules import SetBlockWrapper, HorizontalPoolingPyramid, PackSequenceWrapper, SeparateFCs
 from utils import clones
-
+from utils import get_valid_args, is_list, is_dict, get_attr_from
+from . import backbones
 
 class BasicConv1d(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, **kwargs):
@@ -77,16 +77,14 @@ class TemporalFeatureAggregator(nn.Module):
         return ret
 
 
-class GaitPart(BaseModel):
-    def __init__(self, *args, **kargs):
-        super(GaitPart, self).__init__(*args, **kargs)
+class GaitPart(nn.Module):
+    def __init__(self, model_cfg):
+        super(GaitPart, self).__init__()
         """
             GaitPart: Temporal Part-based Model for Gait Recognition
             Paper:    https://openaccess.thecvf.com/content_CVPR_2020/papers/Fan_GaitPart_Temporal_Part-Based_Model_for_Gait_Recognition_CVPR_2020_paper.pdf
             Github:   https://github.com/ChaoFan96/GaitPart
         """
-
-    def build_network(self, model_cfg):
 
         self.Backbone = self.get_backbone(model_cfg['backbone_cfg'])
         head_cfg = model_cfg['SeparateFCs']
@@ -96,6 +94,28 @@ class GaitPart(BaseModel):
             HorizontalPoolingPyramid(bin_num=model_cfg['bin_num']))
         self.TFA = PackSequenceWrapper(TemporalFeatureAggregator(
             in_channels=head_cfg['in_channels'], parts_num=head_cfg['parts_num']))
+
+
+    # 获取 backbone model
+    def get_backbone(self, backbone_cfg):
+        """Get the backbone of the model."""
+        # dict 类型
+        if is_dict(backbone_cfg):
+            # 从 backbones 包中获取名为 backbone_cfg['type'] 的 Backbone 类 
+            Backbone = get_attr_from([backbones], backbone_cfg['type'])
+            # 验证 Backbone 类的参数
+            valid_args = get_valid_args(Backbone, backbone_cfg, ['type'])
+            # 返回此 Backbone 类实例 
+            return Backbone(**valid_args)
+        # list 类型
+        if is_list(backbone_cfg):
+            # 递归调用 get_backbone(), 并将结果封装成一个 nn.ModuleList
+            Backbone = nn.ModuleList([self.get_backbone(cfg)
+                                      for cfg in backbone_cfg])
+            return Backbone
+        raise ValueError(
+            "Error type for -Backbone-Cfg-, supported: (A list of) dict.")
+
 
     def forward(self, inputs):
         ipts, labs, _, _, seqL = inputs
@@ -129,9 +149,9 @@ class GaitPart(BaseModel):
 def gaitPart():
     model_cfg = {
         'backbone_cfg': {
+            'type': 'Plain',
             'in_channels': 1,
             'layers_cfg': ["BC-32", "BC-32", "M", "FC-64-2", "FC-64-2", "M", "FC-128-3", "FC-128-3"],
-            'type': 'Plain',
         },
         'SeparateFCs': {
             'in_channels': 128,
