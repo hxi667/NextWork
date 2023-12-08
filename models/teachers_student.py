@@ -93,9 +93,8 @@ def get_teachers_student(model_cfg, dataset_name):
     student.__name__ = model_cfg["student"]
     student = student.to(device=torch.device("cuda", device))
     #######################
-    if device == "cuda":
-        out_dims = student.out_dims
-        student = torch.nn.DataParallel(student)
-        student.out_dims = out_dims
+    out_dims = student.out_dims
+    student = torch.nn.DataParallel(student)
+    student.out_dims = out_dims
     #######################
     return teachers, student
