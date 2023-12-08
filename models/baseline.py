@@ -10,6 +10,9 @@ class Baseline(nn.Module):
 
     def __init__(self, model_cfg):
         super(Baseline, self).__init__()
+
+        self.restore_hint = 0
+
         self.Backbone = self.get_backbone(model_cfg['backbone_cfg'])
         self.Backbone = SetBlockWrapper(self.Backbone)
         self.FCs = SeparateFCs(**model_cfg['SeparateFCs'])

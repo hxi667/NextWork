@@ -85,6 +85,7 @@ class GaitPart(nn.Module):
             Paper:    https://openaccess.thecvf.com/content_CVPR_2020/papers/Fan_GaitPart_Temporal_Part-Based_Model_for_Gait_Recognition_CVPR_2020_paper.pdf
             Github:   https://github.com/ChaoFan96/GaitPart
         """
+        self.restore_hint = 0
 
         self.Backbone = self.get_backbone(model_cfg['backbone_cfg'])
         head_cfg = model_cfg['SeparateFCs']

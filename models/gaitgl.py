@@ -70,8 +70,11 @@ class GaitGL(nn.Module):
     def __init__(self, model_cfg, dataset_name="CASIA-B"):
         super(GaitGL, self).__init__()
 
+        self.restore_hint = 0
+
         in_c = model_cfg['channels']
         class_num = model_cfg['class_num']
+        
         
         if dataset_name in ['OUMVLP', 'GREW']:
             # For OUMVLP and GREW

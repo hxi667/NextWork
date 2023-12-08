@@ -45,15 +45,18 @@ evaluator_cfg:
   restore_hint: 0
 
 model_cfg:
-  student: 
-    - name: GaitGL
+  student: GaitGL
   teachers:
     - name: GaitSet
       restore_hint: 40000
+      load_ckpt_strict: true
     - name: GaitPart
       restore_hint: 120000
+      load_ckpt_strict: true
     - name: GaitGL
       restore_hint: 80000
-    - name: Baseline_ResNet9
-      restore_hint: 60000
-  
+      load_ckpt_strict: true
+    # - name: Baseline_ResNet9
+    #   restore_hint: 60000
+    #   load_ckpt_strict: false
+  teacher_eval: false  # use teacher.eval() or not

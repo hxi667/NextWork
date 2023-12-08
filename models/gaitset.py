@@ -14,6 +14,9 @@ class GaitSet(nn.Module):
 
     def __init__(self, model_cfg):
         super(GaitSet, self).__init__()
+
+        self.restore_hint = 0
+
         in_c = model_cfg['in_channels']
         self.set_block1 = nn.Sequential(BasicConv2d(in_c[0], in_c[1], 5, 1, 2),
                                         nn.LeakyReLU(inplace=True),

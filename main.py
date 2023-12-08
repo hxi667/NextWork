@@ -11,7 +11,7 @@ import argparse
 import numpy as np
 
 from models import *
-from models import discriminator, model_utils
+from models import discriminator, teachers_student
 from utils import get_msg_mgr, init_seeds
 from loss import *
 
@@ -27,7 +27,7 @@ parser.add_argument('--local_rank', type=int, default=0,
                     help="passed by torch.distributed.launch module")
 parser.add_argument('--cfgs', type=str, default='./configs/default.yaml', help="path of config file")
 parser.add_argument('--log_to_file', action='store_true',
-                    help="log to file, default path is: output/<dataset>/<model>/<save_name>/<logs>/<Datetime>.txt")
+                    help="log to file, default path is: output/<dataset>/<exp_name>/<Student_name>/<logs>/<Datetime>.txt")
 #  ============================================================
 
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
@@ -37,10 +37,8 @@ parser.add_argument('--gamma', default='[1,1,1,1,1]', type=str, help='')  # eval
 parser.add_argument('--eta', default='[1,1,1,1,1]', type=str, help='')  # eval()
 parser.add_argument('--loss', default="ce", type=str, help='loss selection')
 parser.add_argument('--adv', default=1, type=int, help='add discriminator or not') # 是否添加判别器
-parser.add_argument('--name', default=None, type=str, help='the name of this experiment')
 parser.add_argument('--out_layer', default="[-1]", type=str, help='the type of pooling layer of output')  # eval()
 
-parser.add_argument('--teacher_eval', default=0, type=int, help='use teacher.eval() or not')
 
 parser.add_argument('--grl', type=bool, default=False, help="gradient reverse layer") # 反向传播时候梯度反向层
 
@@ -55,7 +53,6 @@ parser.add_argument('--fc_out', default=1, type=int, help='if immediate output f
 parser.add_argument('--pool_out', default="max", type=str, help='the type of pooling layer of output')
 
 # run config
-parser.add_argument('--seed', type=int, default=17)
 parser.add_argument('--outdir', type=str, default="results")
 
 # optim config
@@ -76,7 +73,7 @@ def initialization(cfgs, training):
     msg_mgr = get_msg_mgr()
     engine_cfg = cfgs['trainer_cfg'] if training else cfgs['evaluator_cfg'] 
 
-    output_path = os.path.join('output/', cfgs['data_cfg']['dataset_name'], engine_cfg['exp_name'], 'Student_'+ cfgs['model_cfg']['student'][0]['name'])
+    output_path = os.path.join('output/', cfgs['data_cfg']['dataset_name'], engine_cfg['exp_name'], 'Student_'+ cfgs['model_cfg']['student'])
     if training:
         # 初始化 SummaryWriter 和 logger
         msg_mgr.init_manager(output_path, args.log_to_file, engine_cfg['log_iter'],
@@ -122,19 +119,17 @@ if __name__ == '__main__':
     cfgs['data_cfg']['steps_per_epoch'] = len(train_loader)
 
     # ================= Model Setup ================ #
-    msg_mgr.log_info('==> ==> Training..')
-    msg_mgr.log_info('Teachers:')
-    msg_mgr.log_info(str([dic['name'] for dic in cfgs['model_cfg']['teachers']]))
-    msg_mgr.log_info('Student:')
-    msg_mgr.log_info(str([dic['name'] for dic in cfgs['model_cfg']['student']])) 
+    # msg_mgr.log_info('==> ==> Training..')
     msg_mgr.log_info('==> ==> Building Model..')
 
     # get models as teachers and students
-    teachers, student = model_utils.get_teachers_student(cfgs['model_cfg'])
+    teachers, student = teachers_student.get_teachers_student(cfgs['model_cfg'], cfgs['data_cfg']['dataset_name'])
 
-
-    msg_mgr.log_info("==> ==> Teacher(s): ", " ".join([teacher.__name__ for teacher in teachers]))
-    msg_mgr.log_info("==> ==> Student: ", args.student)
+    msg_mgr.log_info("Teacher(s): ")
+    msg_mgr.log_info([teacher.__name__ for teacher in teachers])
+    msg_mgr.log_info("Student: ")
+    msg_mgr.log_info([student.__name__])
+    
 
     dims = [student.out_dims[i] for i in eval(args.out_layer)]
 
@@ -154,6 +149,7 @@ if __name__ == '__main__':
     print(args)
     msg_mgr.log_info('==> ==> Building model..')
 
+    # 断点继续训练
     if args.resume:
         # Load checkpoint.
         print('==> ==> Resuming from checkpoint..')
