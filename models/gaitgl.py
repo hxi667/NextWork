@@ -71,6 +71,7 @@ class GaitGL(nn.Module):
         super(GaitGL, self).__init__()
 
         self.restore_hint = 0
+        self.load_ckpt_strict = True
 
         in_c = model_cfg['channels']
         class_num = model_cfg['class_num']

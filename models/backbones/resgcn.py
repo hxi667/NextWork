@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from ..modules import TemporalBasicBlock, TemporalBottleneckBlock, SpatialBasicBlock, SpatialBottleneckBlock
+from models.modules import TemporalBasicBlock, TemporalBottleneckBlock, SpatialBasicBlock, SpatialBottleneckBlock
 
 class ResGCNModule(nn.Module):
     """

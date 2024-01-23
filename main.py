@@ -2,27 +2,23 @@ from __future__ import print_function
 
 import torch
 import torch.optim as optim
-import torch.nn.functional as F
-
 
 import yaml
 import os
 import argparse
-import numpy as np
 
 from models import *
 from models import discriminator, teachers_student
 from utils import get_msg_mgr, init_seeds
-from loss import *
-
+from models.losses import lossmap
 
 from data.transform import get_transform
 from data.dataloader import get_loader
 
+
+
 # ================= Arugments ================ #
 parser = argparse.ArgumentParser(description='Training Gait with PyTorch')
-
-#  ============================================================
 parser.add_argument('--local_rank', type=int, default=0,
                     help="passed by torch.distributed.launch module")
 parser.add_argument('--cfgs', type=str, default='./configs/default.yaml', help="path of config file")
@@ -31,16 +27,8 @@ parser.add_argument('--log_to_file', action='store_true',
 #  ============================================================
 
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
-parser.add_argument('--d_lr', default=0.1, type=float, help='discriminator learning rate')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
-parser.add_argument('--gamma', default='[1,1,1,1,1]', type=str, help='')  # eval()
-parser.add_argument('--eta', default='[1,1,1,1,1]', type=str, help='')  # eval()
-parser.add_argument('--loss', default="ce", type=str, help='loss selection')
-parser.add_argument('--adv', default=1, type=int, help='add discriminator or not') # 是否添加判别器
 parser.add_argument('--out_layer', default="[-1]", type=str, help='the type of pooling layer of output')  # eval()
-
-
-parser.add_argument('--grl', type=bool, default=False, help="gradient reverse layer") # 反向传播时候梯度反向层
 
 
 # model config
@@ -93,25 +81,29 @@ if __name__ == '__main__':
     if torch.distributed.get_world_size() != torch.cuda.device_count():
         raise ValueError("Expect number of available GPUs({}) equals to the world size({}).".format(
             torch.cuda.device_count(), torch.distributed.get_world_size()))
+    
+    # Cuda setup
+    device = torch.distributed.get_rank()
+    torch.cuda.set_device(device)
 
     # ================= Load Config File ================ #
     with open(args.cfgs, 'r') as stream:
         cfgs = yaml.safe_load(stream)
      
-    # ================= Initialization ================ #
-    # init SummaryWriter and logger， random seeds
+    # ================= Initialization SummaryWriter and logger， random seeds ================ #
     initialization(cfgs, training=True)
     
-    best_acc = 0  # best test accuracy
-    start_epoch = 0  # start from epoch 0 or last checkpoint epoch
+    # TODO
+    best_acc = 0  # best test accuracy ???
+    start_epoch = 0  # start from epoch 0 or last checkpoint epoch ???
     
     msg_mgr = get_msg_mgr()
 
     # ================= Data Loader ================ #
     msg_mgr.log_info('==> ==> Preparing Data..')
 
-    transform_train = get_transform(cfgs['trainer_cfg']['transform'])
-    transform_test = get_transform(cfgs['evaluator_cfg']['transform'])
+    train_transform = get_transform(cfgs['trainer_cfg']['transform'])
+    test_transform = get_transform(cfgs['evaluator_cfg']['transform'])
 
     train_loader = get_loader(cfgs, train=True)
     test_loader = get_loader(cfgs, train=False)
@@ -119,73 +111,55 @@ if __name__ == '__main__':
     cfgs['data_cfg']['steps_per_epoch'] = len(train_loader)
 
     # ================= Model Setup ================ #
-    # msg_mgr.log_info('==> ==> Training..')
     msg_mgr.log_info('==> ==> Building Model..')
 
     # get models as teachers and students
-    teachers, student = teachers_student.get_teachers_student(cfgs['model_cfg'], cfgs['data_cfg']['dataset_name'])
+    teachers, student = teachers_student.get_teachers_student(cfgs['model_cfg'], cfgs['data_cfg']['dataset_name'], device)
 
     msg_mgr.log_info("Teacher(s): ")
     msg_mgr.log_info([teacher.__name__ for teacher in teachers])
     msg_mgr.log_info("Student: ")
     msg_mgr.log_info([student.__name__])
     
+    # TODO
+    dims = [10]
+    # dims = [student.out_dims[i] for i in eval(args.out_layer)]
+    msg_mgr.log_info(["student dims: ", dims])
 
-    dims = [student.out_dims[i] for i in eval(args.out_layer)]
+    update_parameters = [{'student params': student.parameters()}]
 
-    msg_mgr.log_info("dims:", dims)
-
-    update_parameters = [{'params': student.parameters()}]
-
-    # 鉴别器
-    if args.adv:
-        discriminators = discriminator.Discriminators(dims, grl=args.grl)
+    # discriminator
+    if cfgs['discriminator_cfg']['adv']:
+        discriminators = discriminator.Discriminators(dims, grl=cfgs['discriminator_cfg']['grl'])
         for d in discriminators.discriminators:
-            d = d.to(device)
-            if device == "cuda":
-                d = torch.nn.DataParallel(d)
-            update_parameters.append({'params': d.parameters(), "lr": args.d_lr})
+            d = d.to(device=torch.device("cuda", device))
+            update_parameters.append({'params': d.parameters(), "lr": cfgs['discriminator_cfg']['d_lr']})
 
-    print(args)
-    msg_mgr.log_info('==> ==> Building model..')
-
+    # TODO
     # 断点继续训练
     if args.resume:
         # Load checkpoint.
-        print('==> ==> Resuming from checkpoint..')
+        print('==> ==> Resuming student from checkpoint..')
         msg_mgr.log_info('==> ==> Building model..')
         assert os.path.isdir('checkpoint'), 'Error: no checkpoint directory found!'
         checkpoint = torch.load('./checkpoint/%s-generator/ckpt.t7' % "_".join(args.teachers))
         student.load_state_dict(checkpoint['net'])
         start_epoch = checkpoint['epoch']
 
-    # ================= Loss Function for Generator ================ #
-
-    if args.loss == "l1":
-        loss = F.l1_loss
-    elif args.loss == "l2":
-        loss = F.mse_loss
-    elif args.loss == "l1_soft":
-        loss = L1_soft
-    elif args.loss == "l2_soft":
-        loss = L2_soft
-    elif args.loss == "ce":
-        loss = CrossEntropy      # CrossEntropy for multiple classification
-
+    # ================= Loss Function  ================ #
+    # for Generator
+    loss = lossmap.get_loss(cfgs['loss_map']['loss'])
     # loss between student and teacher
-    criterion = betweenLoss(eval(args.gamma), loss=loss)
+    criterion = lossmap.betweenLoss(cfgs['loss_map']['gamma'], loss=loss)
 
-    # ================= Loss Function for Discriminator ================ #
-
-    # 添加鉴别器时的loss
-    if args.adv:
-        discriminators_criterion = discriminatorLoss(discriminators, eval(args.eta))
-    # 未添加鉴别器时的假loss
+    # for Discriminator
+    if cfgs['discriminator_cfg']['adv']:
+        discriminators_criterion = lossmap.discriminatorLoss(discriminators, cfgs['loss_map']['eta'])
     else:
-        discriminators_criterion = discriminatorFakeLoss()
+        discriminators_criterion = lossmap.discriminatorFakeLoss() # FakeLoss
+
 
     # ================= Optimizer Setup ================ #
-
     if args.student == "densenet_cifar":
         optimizer = optim.SGD(update_parameters, lr=args.lr, momentum=0.9, weight_decay=1e-4, nesterov=True)
         scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[150 * min(2, len(teachers)), 250 * min(2, (len(teachers)))],gamma=0.1)
@@ -197,15 +171,8 @@ if __name__ == '__main__':
         optimizer = optim.SGD(update_parameters, lr=args.lr, momentum=0.9, weight_decay=5e-4)  # nesterov = True, weight_decay = 1e-4，stage = 3, batch_size = 64
         scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[150 * min(1, len(teachers)), 250 * min(1, (len(teachers)))],gamma=0.1)
 
+
     # ================= Training and Testing ================ #
-
-    def teacher_selector(teachers):
-        idx = np.random.randint(len(teachers))
-        return teachers[idx]
-
-    def output_selector(outputs, answers, idx):
-        return [outputs[i] for i in idx], [answers[i] for i in idx]
-
     def train(epoch):
         print('\nEpoch: %d' % epoch)
         msg_mgr.log_info('==> ==> Building model..')
@@ -224,11 +191,11 @@ if __name__ == '__main__':
             # Get output from student model
             outputs = student(inputs)
             # Get teacher model
-            teacher = teacher_selector(teachers)
+            teacher = teachers_student.selector_teacher(teachers)
             # Get output from teacher model
             answers = teacher(inputs)
             # Select output from student and teacher
-            outputs, answers = output_selector(outputs, answers, eval(args.out_layer))
+            outputs, answers = teachers_student.selector_output(outputs, answers, eval(args.out_layer))
             # Calculate loss between student and teacher
             loss = criterion(outputs, answers)
             # Calculate loss for discriminators
@@ -265,11 +232,11 @@ if __name__ == '__main__':
                 # Get output from student model
                 outputs = student(inputs)
                 # Get teacher model
-                teacher = teacher_selector(teachers)
+                teacher = teachers_student.selector_teacher(teachers)
                 # Get output from teacher model
                 answers = teacher(inputs)
                 # Select output from student and teacher
-                outputs, answers = output_selector(outputs, answers, eval(args.out_layer))
+                outputs, answers = teachers_student.selector_output(outputs, answers, eval(args.out_layer))
                 # Calculate loss between student and teacher
                 loss = criterion(outputs, answers)
                 # Calculate loss for discriminators
@@ -303,6 +270,7 @@ if __name__ == '__main__':
                 os.mkdir(FILE_PATH)
             save_name = './checkpoint' + '/' + "_".join(args.teachers) + '-generator/ckpt.t7'
             torch.save(state, save_name)
+
 
     for epoch in range(start_epoch, start_epoch + args.epochs*(len(teachers))):
         train(epoch)

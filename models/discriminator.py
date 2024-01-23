@@ -3,15 +3,15 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Function
 
-# 反向传播时梯度反转
+
+# 反向传播时，梯度取反
 class GradReverse(Function):
     def forward(self, x):
         return x
-    
     def backward(self, grad_output):
         return (-grad_output)
 
-# 反向传播时梯度反转
+# 反向传播时，梯度取反
 def grad_reverse(x):
     return GradReverse()(x)
 
@@ -32,6 +32,7 @@ class Discriminator(nn.Module):
         out = out.view(out.size(0), -1)
         return out
 
+
 class Discriminators(nn.Module):
     def __init__(self, output_dims, grl):
         super(Discriminators, self).__init__()
@@ -40,6 +41,7 @@ class Discriminators(nn.Module):
     
     def forward(self, x):
         if self.grl == True:
+            # 反向传播时，梯度取反
             out = [self.discriminators[i](grad_reverse(x[i])) for i in range(len(self.discriminators))]
         else:
             out = [self.discriminators[i](x[i]) for i in range(len(self.discriminators))]

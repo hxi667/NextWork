@@ -5,6 +5,7 @@ import models.gaitgl as gaitgl
 import models.gaitset as gaitset
 import models.gaitpart as gaitpart
 import models.baseline as baseline
+import numpy as np
 
 from utils import get_msg_mgr
 
@@ -48,10 +49,7 @@ def resume_ckpt(device, model, dataset_name):
 
 
 
-def get_teachers_student(model_cfg, dataset_name):
-    # Cuda setup
-    device = torch.distributed.get_rank()
-    torch.cuda.set_device(device)
+def get_teachers_student(model_cfg, dataset_name, device):
 
     model_map = {"GaitSet": gaitset.gaitSet,
                  "GaitPart": gaitpart.gaitPart,
@@ -92,9 +90,15 @@ def get_teachers_student(model_cfg, dataset_name):
     student = model_map[model_cfg["student"]]() # eg: GaitSet()
     student.__name__ = model_cfg["student"]
     student = student.to(device=torch.device("cuda", device))
-    #######################
-    out_dims = student.out_dims
-    student = torch.nn.DataParallel(student)
-    student.out_dims = out_dims
-    #######################
+
     return teachers, student
+
+
+
+def teacher(teachers):
+    idx = np.random.randint(len(teachers))
+    return teachers[idx]
+
+# Select output from student and teacher
+def selector_output(outputs, answers, idx):
+    return [outputs[i] for i in idx], [answers[i] for i in idx]

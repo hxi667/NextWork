@@ -2,17 +2,23 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
+
+
+
 def CrossEntropy(outputs, targets):
     log_softmax_outputs = F.log_softmax(outputs, dim=1)
     softmax_targets = F.softmax(targets, dim=1)
 
     return -(log_softmax_outputs*softmax_targets).sum(dim=1).mean()
 
+
 def L1_soft(outputs, targets):
     softmax_outputs = F.softmax(outputs, dim=1)
     softmax_targets = F.softmax(targets, dim=1)
 
     return F.l1_loss(softmax_outputs, softmax_targets)
+
 
 def L2_soft(outputs, targets):
     softmax_outputs = F.softmax(outputs, dim=1)
@@ -21,6 +27,7 @@ def L2_soft(outputs, targets):
     return F.mse_loss(softmax_outputs, softmax_targets)
 
 
+# loss between student and teacher
 class betweenLoss(nn.Module):
     def __init__(self, gamma=[1, 1, 1, 1, 1, 1], loss=nn.L1Loss()):
         super(betweenLoss, self).__init__()
@@ -57,8 +64,17 @@ class discriminatorFakeLoss(nn.Module):
     def forward(self, outputs, targets):
         res = (0*outputs[0]).sum()
         return res
+    
+
+loss_map = {"L1": F.l1_loss,
+            "L2": F.mse_loss,
+            "L1_soft": L1_soft,
+            'L2_soft': L2_soft,
+            'ce': CrossEntropy}
 
 
-
-
-
+def get_loss(loss):
+    if loss in loss_map:
+        return loss_map[loss]
+    else:
+        raise NotImplementedError

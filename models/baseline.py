@@ -12,6 +12,7 @@ class Baseline(nn.Module):
         super(Baseline, self).__init__()
 
         self.restore_hint = 0
+        self.load_ckpt_strict = True
 
         self.Backbone = self.get_backbone(model_cfg['backbone_cfg'])
         self.Backbone = SetBlockWrapper(self.Backbone)

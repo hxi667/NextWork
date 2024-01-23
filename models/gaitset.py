@@ -16,6 +16,7 @@ class GaitSet(nn.Module):
         super(GaitSet, self).__init__()
 
         self.restore_hint = 0
+        self.load_ckpt_strict = True
 
         in_c = model_cfg['in_channels']
         self.set_block1 = nn.Sequential(BasicConv2d(in_c[0], in_c[1], 5, 1, 2),

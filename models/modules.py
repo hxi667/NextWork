@@ -517,6 +517,7 @@ class SpatialGraphConv(nn.Module):
 
         return x
 
+
 class SpatialBasicBlock(nn.Module):
     """
         SpatialGraphConv_Res_Block
@@ -549,6 +550,7 @@ class SpatialBasicBlock(nn.Module):
         x = self.relu(x + res_block)
 
         return x
+
 
 class SpatialBottleneckBlock(nn.Module):
     """
@@ -597,6 +599,7 @@ class SpatialBottleneckBlock(nn.Module):
         x = self.relu(x + res_block)
 
         return x
+
 
 class SpatialAttention(nn.Module):
     """

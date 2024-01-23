@@ -32,6 +32,27 @@ trainer_cfg:
   scheduler_reset: true
   exp_name: Exp_Name
   restore_hint: 0
+  loss: ce
+
+discriminator_cfg:  
+  adv: true  # add discriminator or not
+  grl: false  # 反向传播时，梯度取反
+  d_lr: 0.1 # discriminator learning rate
+
+loss_map:
+  loss: ce
+  gamma:
+    - 1
+    - 1
+    - 1
+    - 1 
+    - 1
+  eta:
+    - 1
+    - 1
+    - 1
+    - 1 
+    - 1 
 
 
 evaluator_cfg:
@@ -49,14 +70,14 @@ model_cfg:
   teachers:
     - name: GaitSet
       restore_hint: 40000
-      load_ckpt_strict: true
+      load_ckpt_strict: true # If True, check whether the checkpoint is the same as the defined model.
     - name: GaitPart
       restore_hint: 120000
       load_ckpt_strict: true
     - name: GaitGL
       restore_hint: 80000
       load_ckpt_strict: true
-    # - name: Baseline_ResNet9
-    #   restore_hint: 60000
-    #   load_ckpt_strict: false
+    - name: Baseline_ResNet9
+      restore_hint: 60000
+      load_ckpt_strict: true
   teacher_eval: false  # use teacher.eval() or not

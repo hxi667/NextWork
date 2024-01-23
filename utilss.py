@@ -6,13 +6,12 @@
 import os
 import sys
 import time
-import math
 
 from models import *
 
 import torch.nn as nn
 import torch.nn.init as init
-import torch.backends.cudnn as cudnn
+
 
 
 def get_mean_and_std(dataset):

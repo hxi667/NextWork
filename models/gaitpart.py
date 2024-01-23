@@ -86,6 +86,7 @@ class GaitPart(nn.Module):
             Github:   https://github.com/ChaoFan96/GaitPart
         """
         self.restore_hint = 0
+        self.load_ckpt_strict = True
 
         self.Backbone = self.get_backbone(model_cfg['backbone_cfg'])
         head_cfg = model_cfg['SeparateFCs']
