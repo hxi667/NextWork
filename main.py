@@ -14,7 +14,7 @@ from models.losses import lossmap
 
 from data.transform import get_transform
 from data.dataloader import get_loader
-
+from utils.common import progress_bar
 
 
 # ================= Arugments ================ #

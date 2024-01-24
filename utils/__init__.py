@@ -16,3 +16,4 @@ from .common import get_attr_from
 from .common import NoOp
 from .msg_manager import get_msg_mgr
 from .common import get_ddp_module, ddp_all_gather
+from .common import progress_bar
