@@ -10,14 +10,6 @@ data_cfg:
 
 
 trainer_cfg:
-  transform:
-  - type: Compose
-    trf_cfg:
-      - type: BaseSilCuttingTransform
-      - type: RandomRotate
-        prob: 0.3
-      - type: RandomErasing
-        prob: 0.3
   sampler:
     batch_shuffle: true
     batch_size:
@@ -32,12 +24,37 @@ trainer_cfg:
   scheduler_reset: true
   exp_name: Exp_Name
   restore_hint: 0
-  loss: ce
+
+
+transform_cfg:
+  train:
+  - type: Compose
+      trf_cfg:
+        - type: BaseSilCuttingTransform
+        - type: RandomRotate
+          prob: 0.3
+        - type: RandomErasing
+          prob: 0.3
+  test:
+  - type: BaseSilCuttingTransform          
+
+
+
+evaluator_cfg:
+  sampler:
+    batch_size: 8 
+    sample_type: all_ordered
+    type: InferenceSampler
+  exp_name: Exp_Name
+  restore_hint: 0
+
+
 
 discriminator_cfg:  
   adv: true  # add discriminator or not
   grl: false  # 反向传播时，梯度取反
   d_lr: 0.1 # discriminator learning rate
+
 
 loss_map:
   loss: ce
@@ -54,16 +71,6 @@ loss_map:
     - 1 
     - 1 
 
-
-evaluator_cfg:
-  transform:
-    - type: BaseSilCuttingTransform  
-  sampler:
-    batch_size: 8 
-    sample_type: all_ordered
-    type: InferenceSampler
-  exp_name: Exp_Name
-  restore_hint: 0
 
 model_cfg:
   student: GaitGL

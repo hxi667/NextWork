@@ -95,7 +95,7 @@ def get_teachers_student(model_cfg, dataset_name, device):
 
 
 
-def teacher(teachers):
+def selector_teacher(teachers):
     idx = np.random.randint(len(teachers))
     return teachers[idx]
 

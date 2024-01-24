@@ -37,8 +37,7 @@ class betweenLoss(nn.Module):
     def forward(self, outputs, targets):
         assert len(outputs)
         assert len(outputs) == len(targets)
-        length = len(outputs)
-        res = sum([self.gamma[i] * self.loss(outputs[i], targets[i]) for i in range(length)])
+        res = sum([self.gamma[i] * self.loss(outputs[i], targets[i]) for i in range(len(outputs))])
         return res
 
 
