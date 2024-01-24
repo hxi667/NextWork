@@ -4,7 +4,7 @@
 """
 
 import torch.nn as nn
-from models.modules import BasicConv2d, FocalConv2d
+from ..modules import BasicConv2d, FocalConv2d
 
 
 class Plain(nn.Module):

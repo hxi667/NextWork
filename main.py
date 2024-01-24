@@ -7,10 +7,10 @@ import yaml
 import os
 import argparse
 
-from models import *
-from models import discriminator, teachers_student
+from modeling import *
+from modeling import discriminator, teachers_student
 from utils import get_msg_mgr, init_seeds
-from models.losses import lossmap
+from modeling.losses import lossmap
 
 from data.transform import get_transform
 from data.dataloader import get_loader

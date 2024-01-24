@@ -36,7 +36,7 @@ evaluator_cfg:
 
 transform_cfg:
   train:
-  - type: Compose
+    - type: Compose
       trf_cfg:
         - type: BaseSilCuttingTransform
         - type: RandomRotate
@@ -44,7 +44,7 @@ transform_cfg:
         - type: RandomErasing
           prob: 0.3
   test:
-  - type: BaseSilCuttingTransform          
+    - type: BaseSilCuttingTransform          
 
 
 discriminator_cfg:  

@@ -1,10 +1,7 @@
 import torch
 
-from models import *
-import models.gaitgl as gaitgl
-import models.gaitset as gaitset
-import models.gaitpart as gaitpart
-import models.baseline as baseline
+from modeling import *
+from .models import gaitGL, gaitSet, gaitPart, baseline_ResNet9
 import numpy as np
 
 from utils import get_msg_mgr
@@ -51,10 +48,10 @@ def resume_ckpt(device, model, dataset_name):
 
 def get_teachers_student(model_cfg, dataset_name, device):
 
-    model_map = {"GaitSet": gaitset.gaitSet,
-                 "GaitPart": gaitpart.gaitPart,
-                 "GaitGL": gaitgl.gaitGL,
-                 'Baseline_ResNet9': baseline.baseline_ResNet9}
+    model_map = {"GaitSet": gaitSet,
+                 "GaitPart": gaitPart,
+                 "GaitGL": gaitGL,
+                 'Baseline_ResNet9': baseline_ResNet9}
 
     # Teachers setup
     teachers = []

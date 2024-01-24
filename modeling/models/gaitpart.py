@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
-from models.modules import SetBlockWrapper, HorizontalPoolingPyramid, PackSequenceWrapper, SeparateFCs
+from ..modules import SetBlockWrapper, HorizontalPoolingPyramid, PackSequenceWrapper, SeparateFCs
 from utils import clones
 from utils import get_valid_args, is_list, is_dict, get_attr_from
-from . import backbones
+from .. import backbones
 
 class BasicConv1d(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, **kwargs):

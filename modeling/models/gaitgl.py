@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 # from models.base_model import BaseModel
-from models.modules import SeparateFCs, BasicConv3d, PackSequenceWrapper, SeparateBNNecks
+from ..modules import SeparateFCs, BasicConv3d, PackSequenceWrapper, SeparateBNNecks
 
 
 class GLConv(nn.Module):

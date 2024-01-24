@@ -1,10 +1,10 @@
 import torch
 import torch.nn as nn
-from models.modules import SetBlockWrapper, HorizontalPoolingPyramid, PackSequenceWrapper, SeparateFCs, SeparateBNNecks
+from ..modules import SetBlockWrapper, HorizontalPoolingPyramid, PackSequenceWrapper, SeparateFCs, SeparateBNNecks
 
 from einops import rearrange
 from utils import get_valid_args, is_list, is_dict, get_attr_from
-from . import backbones
+from .. import backbones
 
 class Baseline(nn.Module):
 

@@ -2,7 +2,7 @@ import torch
 import copy
 import torch.nn as nn
 
-from models.modules import SeparateFCs, BasicConv2d, SetBlockWrapper, HorizontalPoolingPyramid, PackSequenceWrapper
+from ..modules import SeparateFCs, BasicConv2d, SetBlockWrapper, HorizontalPoolingPyramid, PackSequenceWrapper
 
 
 class GaitSet(nn.Module):
