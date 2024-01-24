@@ -25,6 +25,14 @@ trainer_cfg:
   exp_name: Exp_Name
   restore_hint: 0
 
+evaluator_cfg:
+  sampler:
+    batch_size: 8 
+    sample_type: all_ordered
+    type: InferenceSampler
+  exp_name: Exp_Name
+  restore_hint: 0
+
 
 transform_cfg:
   train:
@@ -37,17 +45,6 @@ transform_cfg:
           prob: 0.3
   test:
   - type: BaseSilCuttingTransform          
-
-
-
-evaluator_cfg:
-  sampler:
-    batch_size: 8 
-    sample_type: all_ordered
-    type: InferenceSampler
-  exp_name: Exp_Name
-  restore_hint: 0
-
 
 
 discriminator_cfg:  

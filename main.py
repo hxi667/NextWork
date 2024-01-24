@@ -26,16 +26,15 @@ parser.add_argument('--log_to_file', action='store_true',
                     help="log to file, default path is: output/<dataset>/<exp_name>/<Student_name>/<logs>/<Datetime>.txt")
 #  ============================================================
 
-parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
-parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
 parser.add_argument('--out_layer', default="[-1]", type=str, help='the type of pooling layer of output')  # eval()
-
 # model config
 parser.add_argument('--out_dims', default="[5000,1000,500,200,10]", type=str, help='the dims of output pooling layers')  # eval()
 parser.add_argument('--fc_out', default=1, type=int, help='if immediate output from fc-layer')
 parser.add_argument('--pool_out', default="max", type=str, help='the type of pooling layer of output')
 
 # optim config
+parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
+parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
 parser.add_argument('--epochs', type=int, default=1800)
 parser.add_argument('--batch_size', type=int, default=128)
 parser.add_argument('--weight_decay', type=float, default=1e-4)

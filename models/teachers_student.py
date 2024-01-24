@@ -99,6 +99,7 @@ def selector_teacher(teachers):
     idx = np.random.randint(len(teachers))
     return teachers[idx]
 
+
 # Select output from student and teacher
 def selector_output(outputs, answers, idx):
     return [outputs[i] for i in idx], [answers[i] for i in idx]
