@@ -6,10 +6,16 @@ data_cfg:
   # remove_no_gallery: false
   # test_dataset_name: CASIA-B
   cache: true
-  steps_per_epoch: 0
 
 
 trainer_cfg:
+  enable_float16: true
+  with_test: false
+  log_iter: 100
+  optimizer_reset: true
+  scheduler_reset: true
+  exp_name: Exp_Name
+  restore_hint: 0
   sampler:
     batch_shuffle: true
     batch_size:
@@ -19,42 +25,42 @@ trainer_cfg:
     frames_skip_num: 0
     sample_type: fixed_ordered
     type: TripletSampler
-  log_iter: 100
-  optimizer_reset: true
-  scheduler_reset: true
-  exp_name: Exp_Name
-  restore_hint: 0
+  transform:
+  - type: Compose
+    trf_cfg:
+      - type: BaseSilCuttingTransform
+      - type: RandomRotate
+        prob: 0.3
+      - type: RandomErasing
+        prob: 0.3
+
 
 evaluator_cfg:
+  enable_float16: false 
   sampler:
     batch_size: 8 
     sample_type: all_ordered
     type: InferenceSampler
   exp_name: Exp_Name
   restore_hint: 0
+  transform:
+  - type: BaseSilCuttingTransform
 
 
-transform_cfg:
-  train:
-    - type: Compose
-      trf_cfg:
-        - type: BaseSilCuttingTransform
-        - type: RandomRotate
-          prob: 0.3
-        - type: RandomErasing
-          prob: 0.3
-  test:
-    - type: BaseSilCuttingTransform          
-
-
-discriminator_cfg:  
-  adv: true  # add discriminator or not
-  grl: false  # 反向传播时，梯度取反
-  d_lr: 0.1 # discriminator learning rate
-
+loss_cfg:
+  - loss_term_weight: 1.0
+    margin: 0.2
+    type: TripletLoss
+    log_prefix: triplet
+  - loss_term_weight: 1.0
+    scale: 1
+    type: CrossEntropyLoss
+    log_accuracy: true
+    label_smooth: false
+    log_prefix: softmax
 
 loss_map:
-  loss: ce
+  loss: CE
   gamma:
     - 1
     - 1
@@ -67,6 +73,24 @@ loss_map:
     - 1
     - 1 
     - 1 
+
+
+
+optimizer_cfg:
+  lr: 0.1
+  momentum: 0.9
+  weight_decay: 0.0005
+  nesterov: true
+  solver: SGD
+
+scheduler_cfg:
+  gamma: 0.1
+  milestones: # Learning Rate Reduction at each milestones
+    - 20000
+    - 40000
+    - 50000
+  scheduler: MultiStepLR
+
 
 
 model_cfg:
@@ -85,3 +109,7 @@ model_cfg:
       restore_hint: 60000
       load_ckpt_strict: true
   teacher_eval: false  # use teacher.eval() or not
+  discriminator:  
+    adv: true  # add discriminator or not
+    grl: false  # 反向传播时，梯度取反
+    d_lr: 0.1 # discriminator learning rate

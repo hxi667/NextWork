@@ -7,8 +7,8 @@ import numpy as np
 from utils import get_msg_mgr
 
 
-# load checkpoint
-def load_ckpt(device, model, save_name):
+# load teachers checkpoint
+def load_teachers_ckpt(device, model, save_name):
     
     msg_mgr = get_msg_mgr()
 
@@ -31,8 +31,8 @@ def load_ckpt(device, model, save_name):
     msg_mgr.log_info("Restore Parameters from %s !!!" % save_name)
 
 
-# load model from checkpoint
-def resume_ckpt(device, model, dataset_name):
+# load teachers model from checkpoint
+def resume_teachers_ckpt(device, model, dataset_name):
     # if type(restore_hint) == int
     if isinstance(model.restore_hint, int):
         save_name = './checkpoint/{}/{}/{}-{:0>5}.pt'.format(dataset_name, model.__name__, model.__name__, model.restore_hint)
@@ -42,7 +42,7 @@ def resume_ckpt(device, model, dataset_name):
     else:
         raise ValueError(
             "Error type for -Restore_Hint-, supported: int or string.")
-    load_ckpt(device, model, save_name)
+    load_teachers_ckpt(device, model, save_name)
 
 
 
@@ -76,7 +76,7 @@ def get_teachers_student(model_cfg, dataset_name, device):
 
     # Load parameters in teacher models
     for teacher in teachers:
-        resume_ckpt(device, teacher, dataset_name)
+        resume_teachers_ckpt(device, teacher, dataset_name)
  
     if model_cfg["teacher_eval"]:
         for teacher in teachers:
@@ -87,7 +87,7 @@ def get_teachers_student(model_cfg, dataset_name, device):
     student = model_map[model_cfg["student"]]() # eg: GaitSet()
     student.__name__ = model_cfg["student"]
     student = student.to(device=torch.device("cuda", device))
-
+    
     return teachers, student
 
 

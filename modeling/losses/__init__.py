@@ -2,6 +2,11 @@ from inspect import isclass
 from pkgutil import iter_modules
 from pathlib import Path
 from importlib import import_module
+from .l1soft import L1_soft
+from .l2soft import L2_soft
+from .CE import CrossEntropy
+
+import torch.nn.functional as F
 
 '''
     动态地导入当前包中的所有modules, 并将每个modules中的类添加到当前包的全局变量中
@@ -21,3 +26,16 @@ for (_, module_name, _) in iter_modules([str(package_dir)]):
         if isclass(attribute):
             # 将该类添加到当前包的全局变量中，以类的名称为键
             globals()[attribute_name] = attribute
+
+loss_map = {"L1": F.l1_loss,
+            "L2": F.mse_loss,
+            "L1_soft": L1_soft,
+            'L2_soft': L2_soft,
+            'CE': CrossEntropy}
+
+
+def get_loss(loss):
+    if loss in loss_map:
+        return loss_map[loss]
+    else:
+        raise NotImplementedError

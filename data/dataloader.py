@@ -23,3 +23,4 @@ def get_loader(cfgs, train=True):
         collate_fn=CollateFn(dataset.label_set, sampler_cfg),
         num_workers=cfgs['data_cfg']['num_workers'])
     return loader
+

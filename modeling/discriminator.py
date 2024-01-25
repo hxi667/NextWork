@@ -11,9 +11,11 @@ class GradReverse(Function):
     def backward(self, grad_output):
         return (-grad_output)
 
+
 # 反向传播时，梯度取反
 def grad_reverse(x):
     return GradReverse()(x)
+
 
 class Discriminator(nn.Module):
     def __init__(self, outputs_size, K = 2):
