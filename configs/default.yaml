@@ -14,7 +14,7 @@ trainer_cfg:
   log_iter: 100
   optimizer_reset: true
   scheduler_reset: true
-  exp_name: Exp_Name
+  save_name: save_name
   restore_hint: 0
   sampler:
     batch_shuffle: true
@@ -41,7 +41,7 @@ evaluator_cfg:
     batch_size: 8 
     sample_type: all_ordered
     type: InferenceSampler
-  exp_name: Exp_Name
+  save_name: save_name
   restore_hint: 0
   transform:
   - type: BaseSilCuttingTransform

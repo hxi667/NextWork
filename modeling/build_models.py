@@ -7,10 +7,13 @@ import torch.optim as optim
 
 from utils.msg_manager import get_msg_mgr
 from utils import get_valid_args, get_attr_from
+from utils import mkdir
+
+from .loss_aggregator import LossAggregator
 
 from modeling import losses, discriminator, teachers_student
 from modeling.losses import betweenloss, discriminatorloss
-from .loss_aggregator import LossAggregator
+
 from data.transform import get_transform
 from data.collate_fn import CollateFn
 from data.dataset import DataSet
@@ -46,7 +49,7 @@ class BuildModel():
             # float16
             self.Scaler = GradScaler()
         self.save_path = osp.join('output/', cfgs['data_cfg']['dataset_name'],
-                                  cfgs['model_cfg']['student'], self.engine_cfg['exp_name'])
+                                  cfgs['model_cfg']['student'], self.engine_cfg['save_name'])
         
         # Cuda setup
         self.device = torch.distributed.get_rank()
@@ -110,13 +113,8 @@ class BuildModel():
         restore_hint = self.engine_cfg['restore_hint']
         if restore_hint != 0:
             # 从 checkpoint 恢复
-            self.resume_ckpt(restore_hint)
-
-
-
-
-
-
+            self.resume_ckpt(restore_hint, self.student)
+        
 
 
 
@@ -179,3 +177,66 @@ class BuildModel():
         scheduler = Scheduler(self.optimizer, **valid_arg)
         return scheduler
     
+        # 保存 checkpoint
+    def save_ckpt(self, model, iteration):
+        if torch.distributed.get_rank() == 0:
+            mkdir(osp.join(self.save_path, "checkpoints/"))
+            save_name = self.engine_cfg['save_name']
+            checkpoint = {
+                'model': model.state_dict(),
+                'optimizer': self.optimizer.state_dict(),
+                'scheduler': self.scheduler.state_dict(),
+                'iteration': iteration}
+            torch.save(checkpoint,
+                        osp.join(self.save_path, 'checkpoints/{}-{:0>5}.pt'.format(save_name, iteration)))
+
+    #  加载 checkpoint
+    def _load_ckpt(self, save_name, model):
+
+
+        load_ckpt_strict = self.engine_cfg['restore_ckpt_strict'] # boolean
+
+        checkpoint = torch.load(save_name, map_location=torch.device(
+            "cuda", self.device))
+        model_state_dict = checkpoint['model']
+
+        # 如果 not load_ckpt_strict 为 True，即不是严格检查checkpoint是否与定义的模型相同，
+        # 则找到两个模型状态字典中共有的参数键，并将它们按照某个规则排序后打印输出
+        if not load_ckpt_strict:
+            self.msg_mgr.log_info("-------- Restored Params List --------")
+            self.msg_mgr.log_info(sorted(set(model_state_dict.keys()).intersection(
+                set(model.state_dict().keys()))))
+
+        model.load_state_dict(model_state_dict, strict=load_ckpt_strict)
+        
+        if self.training:
+            if not self.engine_cfg["optimizer_reset"] and 'optimizer' in checkpoint:
+                self.optimizer.load_state_dict(checkpoint['optimizer'])
+            else:
+                self.msg_mgr.log_warning(
+                    "Restore NO Optimizer from %s !!!" % save_name)
+            if not self.engine_cfg["scheduler_reset"] and 'scheduler' in checkpoint:
+                self.scheduler.load_state_dict(
+                    checkpoint['scheduler'])
+            else:
+                self.msg_mgr.log_warning(
+                    "Restore NO Scheduler from %s !!!" % save_name)
+        self.msg_mgr.log_info("Restore Parameters from %s !!!" % save_name)
+
+
+    # 从 checkpoint 恢复
+    def resume_ckpt(self, restore_hint, model):
+        
+        if isinstance(restore_hint, int):
+            save_name = self.engine_cfg['save_name']
+            save_name = osp.join(
+                self.save_path, 'checkpoints/{}-{:0>5}.pt'.format(save_name, restore_hint))
+            self.iteration = restore_hint
+        # 也可以直接指定 checkpoint 文件的目录
+        elif isinstance(restore_hint, str):
+            save_name = restore_hint
+            self.iteration = 0
+        else:
+            raise ValueError(
+                "Error type for -Restore_Hint-, supported: int or string.")
+        self._load_ckpt(save_name, save_name, model)
