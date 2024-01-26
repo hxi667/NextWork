@@ -1,5 +1,5 @@
 from data.dataset import DataSet
-from utils import get_valid_args, get_attr_from
+from utils.common import get_valid_args, get_attr_from
 import torch.utils.data as tordata
 import data.sampler as Samplers
 from data.collate_fn import CollateFn

@@ -9,12 +9,15 @@ data_cfg:
 
 
 trainer_cfg:
+  find_unused_parameters: false
   enable_float16: true
   with_test: false
   log_iter: 100
   optimizer_reset: true
   scheduler_reset: true
   save_name: save_name
+  sync_BN: true
+  fix_BN: false
   restore_hint: 0
   sampler:
     batch_shuffle: true

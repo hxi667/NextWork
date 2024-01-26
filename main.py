@@ -5,7 +5,7 @@ import os
 import argparse
 import torch
 
-from modeling import build_models
+from modeling.build_models import BuildModel
 
 from utils.common import init_seeds
 from utils.msg_manager import get_msg_mgr
@@ -27,8 +27,6 @@ parser.add_argument('--pool_out', default="max", type=str, help='the type of poo
 
 args = parser.parse_args()
 
-
-    
 
 # init SummaryWriter and logger(to tensorboard, console and file print log info)， random seeds
 def init(cfgs, training):
@@ -66,7 +64,12 @@ if __name__ == '__main__':
     training = (args.phase == 'train')
 
     # ================= Init SummaryWriter, Logger and Random Seeds ================ #
-    init(cfgs, training=training)
+    init(cfgs, training)
 
-
-    build_models.BuildModel(cfgs, training)
+    build_models = BuildModel(cfgs, training)
+    
+    if training:
+        BuildModel.run_train(build_models.student)
+    else:
+        BuildModel.run_test(build_models.student)
+    

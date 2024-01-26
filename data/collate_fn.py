@@ -1,7 +1,7 @@
 import math
 import random
 import numpy as np
-from utils import get_msg_mgr
+from utils.msg_manager import get_msg_mgr
 
 
 class CollateFn(object):

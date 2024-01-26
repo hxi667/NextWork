@@ -8,10 +8,8 @@
             "name": "Python: 当前文件",
             "type": "python",
             "request": "launch",
-            // "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
-            // "module": "torch.distributed.launch",
             "module": "torch.distributed.run",
             "args": [
                 "--master_port",
@@ -21,6 +19,8 @@
                 "main.py",
                 "--cfgs",
                 "./configs/default.yaml",
+                "--phase",
+                "train",
                 "--log_to_file",
             ],
             "env": {

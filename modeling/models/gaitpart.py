@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 from ..modules import SetBlockWrapper, HorizontalPoolingPyramid, PackSequenceWrapper, SeparateFCs
-from utils import clones
-from utils import get_valid_args, is_list, is_dict, get_attr_from
+from utils.common import clones
+from utils.common import get_valid_args, is_list, is_dict, get_attr_from
 from .. import backbones
 
 class BasicConv1d(nn.Module):

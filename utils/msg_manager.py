@@ -32,7 +32,7 @@ class MessageManager:
     # 初始化 logger, 输出logs 到 console 和 log 文件
     def init_logger(self, save_path, log_to_file):
         # 初始化 logger
-        self.logger = logging.getLogger('GaitGait')
+        self.logger = logging.getLogger('Gait_Gait')
         self.logger.setLevel(logging.INFO)
         self.logger.propagate = False
         formatter = logging.Formatter(

@@ -253,11 +253,19 @@ class DDPPassthrough(DDP):
 
 
 # 返回一个经过分布式数据并行 (DDP) 化处理的 module
-def get_ddp_module(module, **kwargs):
+def get_ddp_module(module, find_unused_parameters=False, **kwargs):
     # 检查输入 module 是否包含参数（权重和偏置等），如果没有，则直接返回原始 module
     if len(list(module.parameters())) == 0: 
         return module
     device = torch.cuda.current_device()
     module = DDPPassthrough(module, device_ids=[device], output_device=device,
-                            find_unused_parameters=False, **kwargs)
+                            find_unused_parameters=find_unused_parameters, **kwargs)
     return module
+
+# 模型参数计数
+def params_count(net):
+    n_parameters = sum(p.numel() for p in net.parameters())
+    if hasattr(net, '__name__'):
+        return 'Parameters Count ==> {}: {:.5f}M'.format(net.__name__, n_parameters / 1e6)
+    else:
+        return 'Parameters Count ==> {:.5f}M'.format(n_parameters / 1e6)

@@ -1,10 +1,9 @@
 import torch
 
-from modeling import *
-from .models import gaitGL, gaitSet, gaitPart, baseline_ResNet9
+from modeling.models import gaitGL, gaitSet, gaitPart, baseline_ResNet9
 import numpy as np
 
-from utils import get_msg_mgr
+from utils.msg_manager import get_msg_mgr
 
 
 # load teachers checkpoint

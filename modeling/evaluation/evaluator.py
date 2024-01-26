@@ -1,7 +1,8 @@
 import os
 from time import strftime, localtime
 import numpy as np
-from utils import get_msg_mgr, mkdir
+from utils.msg_manager import get_msg_mgr
+from utils.common import mkdir
 
 from .metric import mean_iou, cuda_dist, compute_ACC_mAP, evaluate_rank, evaluate_many
 from .re_rank import re_ranking

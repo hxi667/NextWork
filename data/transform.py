@@ -4,7 +4,7 @@ import torchvision.transforms as T
 import cv2
 import math
 from data import transform as base_transform
-from utils import is_list, is_dict, get_valid_args
+from utils.common import is_list, is_dict, get_valid_args
 
 
 # no operation 
