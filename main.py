@@ -16,7 +16,7 @@ parser = argparse.ArgumentParser(description='Training Gait with PyTorch')
 parser.add_argument('--local_rank', type=int, default=0, help="passed by torch.distributed.launch module")
 parser.add_argument('--cfgs', type=str, default='./configs/default.yaml', help="path of config file")
 parser.add_argument('--phase', default='train', choices=['train', 'test'], help="choose train or test phase")
-parser.add_argument('--log_to_file', action='store_true', help="log to file, default path is: output/<dataset>/<save_name>/<Student_name>/<logs>/<Datetime>.txt")
+parser.add_argument('--log_to_file', action='store_true', help="log to file, default path is: output/<dataset>/<Student_name>/<save_name>/<logs>/<Datetime>.txt")
 
 #  ============================================================
 parser.add_argument('--out_layer', default="[-1]", type=str, help='the type of pooling layer of output')  # eval()
@@ -34,7 +34,7 @@ def init(cfgs, training):
     msg_mgr = get_msg_mgr()
     engine_cfg = cfgs['trainer_cfg'] if training else cfgs['evaluator_cfg'] 
 
-    output_path = os.path.join('output/', cfgs['data_cfg']['dataset_name'], engine_cfg['save_name'], 'Student_'+ cfgs['model_cfg']['student'])
+    output_path = os.path.join('output/', cfgs['data_cfg']['dataset_name'], 'Student_'+ cfgs['model_cfg']['student'], engine_cfg['save_name'])
     if training:
         # 初始化 SummaryWriter 和 logger
         msg_mgr.init_manager(output_path, args.log_to_file, engine_cfg['log_iter'],
@@ -69,7 +69,7 @@ if __name__ == '__main__':
     build_models = BuildModel(cfgs, training)
     
     if training:
-        BuildModel.run_train(build_models.student)
+        build_models.run_train()
     else:
-        BuildModel.run_test(build_models.student)
+        build_models.run_test()
     

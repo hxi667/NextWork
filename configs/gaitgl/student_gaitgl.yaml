@@ -4,21 +4,24 @@ data_cfg:
   dataset_partition: ./datasets/CASIA-B/CASIA-B.json
   num_workers: 0
   # remove_no_gallery: false
-  # test_dataset_name: CASIA-B
+  test_dataset_name: CASIA-B
   cache: true
 
 
 trainer_cfg:
   find_unused_parameters: false
   enable_float16: true
-  with_test: false
+  with_test: true
   log_iter: 100
-  optimizer_reset: true
-  scheduler_reset: true
-  save_name: save_name
+  restore_ckpt_strict: true # If True, check whether the checkpoint is the same as the defined model.
+  restore_hint: 0
+  optimizer_reset: false
+  scheduler_reset: false
+  save_iter: 10000
+  save_name: GaitGL
   sync_BN: true
   fix_BN: false
-  restore_hint: 0
+  total_iter: 80000
   sampler:
     batch_shuffle: true
     batch_size:
@@ -29,25 +32,20 @@ trainer_cfg:
     sample_type: fixed_ordered
     type: TripletSampler
   transform:
-  - type: Compose
-    trf_cfg:
-      - type: BaseSilCuttingTransform
-      - type: RandomRotate
-        prob: 0.3
-      - type: RandomErasing
-        prob: 0.3
+  - type: BaseSilCuttingTransform
 
 
 evaluator_cfg:
-  enable_float16: false 
+  enable_float16: false
+  restore_ckpt_strict: true
+  restore_hint: 10000
+  save_name: GaitGL
   sampler:
-    batch_size: 8 
+    batch_size: 8 # the batch_size should be equal to the gpus number at the test phase!!!
     sample_type: all_ordered
     type: InferenceSampler
-  save_name: save_name
-  restore_hint: 0
   transform:
-  - type: BaseSilCuttingTransform
+    - type: BaseSilCuttingTransform
 
 
 loss_cfg:
@@ -61,6 +59,7 @@ loss_cfg:
     log_accuracy: true
     label_smooth: false
     log_prefix: softmax
+
 
 loss_map:
   loss: CE
@@ -78,13 +77,16 @@ loss_map:
     - 1 
 
 
-
 optimizer_cfg:
+  # lr: 1.0e-4
+  # solver: Adam
+  # weight_decay: 5.0e-4 
   lr: 0.1
   momentum: 0.9
-  weight_decay: 0.0005
+  weight_decay: 5.0e-4
   nesterov: true
   solver: SGD
+
 
 scheduler_cfg:
   gamma: 0.1
@@ -93,7 +95,6 @@ scheduler_cfg:
     - 40000
     - 50000
   scheduler: MultiStepLR
-
 
 
 model_cfg:

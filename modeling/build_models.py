@@ -1,12 +1,18 @@
 import os.path as osp
+import numpy as np
+
 import torch
 import torch.nn as nn
 from torch.cuda.amp import GradScaler
 import torch.utils.data as tordata
 import torch.optim as optim
+from torch.cuda.amp import autocast
+
+from tqdm import tqdm
 
 from utils.msg_manager import get_msg_mgr
-from utils.common import get_valid_args, get_attr_from, mkdir, get_ddp_module, params_count
+from utils.common import NoOp, Odict, get_valid_args, get_attr_from, np2var, list2var, ts2np
+from utils.common import params_count, mkdir, get_ddp_module,  ddp_all_gather
 
 
 from modeling.teachers_student import get_teachers_student
@@ -15,6 +21,7 @@ from modeling.losses import get_loss
 from modeling.losses.discriminatorloss import discriminatorLoss, discriminatorFakeLoss
 from modeling.losses.betweenloss import betweenLoss
 from modeling.discriminator import Discriminators
+from modeling.evaluation import evaluator as eval_functions
 
 from data.transform import get_transform
 from data.collate_fn import CollateFn
@@ -25,11 +32,17 @@ import data.sampler as Samplers
 class BuildModel():
     def __init__(self, cfgs, training):
         self.cfgs = cfgs
+        self.training = training
         self.iteration = 0
         
         self.msg_mgr = get_msg_mgr()
 
-        self.engine_cfg = cfgs['trainer_cfg'] if training else cfgs['evaluator_cfg']
+        if self.training:
+            self.engine_cfg = cfgs['trainer_cfg']
+            self.msg_mgr.log_info('==> ==> Initialize a model with -Trainer-Cfgs-')
+        else:
+            self.engine_cfg = cfgs['evaluator_cfg']
+            self.msg_mgr.log_info('==> ==> Initialize a model with -Evaluator-Cfgs-')
         if self.engine_cfg is None:
             raise Exception("Initialize a model without -Engine-Cfgs-")
 
@@ -37,21 +50,21 @@ class BuildModel():
         self.msg_mgr.log_info('==> ==> Preparing Data..')
         self.msg_mgr.log_info(cfgs['data_cfg'])
 
-        if training:
+        if self.training:
             self.train_transform = get_transform(cfgs['trainer_cfg']['transform'])
             self.train_loader = self.get_loader(cfgs['data_cfg'], train=True)
-        if not training or self.engine_cfg['with_test']:
+        if not self.training or self.engine_cfg['with_test']:
             self.evaluator_transform = get_transform(cfgs['evaluator_cfg']['transform'])    
             self.test_loader = self.get_loader(cfgs['data_cfg'], train=False)
 
         # ================= Model Setup ================ #
         self.msg_mgr.log_info('==> ==> Building Model..')
 
-        if training and self.engine_cfg['enable_float16']:
+        if self.training and self.engine_cfg['enable_float16']:
             # float16
             self.Scaler = GradScaler()
         self.save_path = osp.join('output/', cfgs['data_cfg']['dataset_name'],
-                                  cfgs['model_cfg']['student'], self.engine_cfg['save_name'])
+                                  'Student_'+ cfgs['model_cfg']['student'], self.engine_cfg['save_name'])
         
         # Cuda setup
         self.device = torch.distributed.get_rank()
@@ -94,7 +107,7 @@ class BuildModel():
             self.msg_mgr.log_info(params_count(discriminator))
 
         # ================= Loss Function Setup ================ #
-        if training:
+        if self.training:
             # for student
             # 如果有多个 losses， 返回由多个损失组成的 ModuleDict
             self.loss_aggregator = LossAggregator(cfgs['loss_cfg'])
@@ -116,11 +129,11 @@ class BuildModel():
 
 
         # if "training" == true, training model, if not, evaluation model
-        self.student.train(training)
+        self.student.train(self.training)
         for teacher in self.teachers:
-            teacher.train(training)
+            teacher.train(self.training)
         for discriminator in self.discriminators.discriminators:
-            discriminator.train(training)
+            discriminator.train(self.training)
 
         restore_hint = self.engine_cfg['restore_hint']
         if restore_hint != 0:
@@ -129,7 +142,7 @@ class BuildModel():
         
 
         # 如果为 True, 应用 Batch Normalization synchronously， 通常在分布式训练中使用，以确保不同 GPU 上的批量归一化参数同步
-        if training and cfgs['trainer_cfg']['sync_BN']:
+        if self.training and cfgs['trainer_cfg']['sync_BN']:
             self.student = nn.SyncBatchNorm.convert_sync_batchnorm(self.student)
             for teacher in self.teachers:
                 teacher = nn.SyncBatchNorm.convert_sync_batchnorm(teacher)
@@ -274,7 +287,7 @@ class BuildModel():
         else:
             raise ValueError(
                 "Error type for -Restore_Hint-, supported: int or string.")
-        self._load_ckpt(save_name, save_name, model)
+        self._load_ckpt(save_name, model)
 
     # fix BatchNorm layer weights
     def fix_BN(self, model):
@@ -282,9 +295,213 @@ class BuildModel():
             classname = module.__class__.__name__
             if classname.find('BatchNorm') != -1:
                 module.eval()
-    @ staticmethod
-    def run_train(model):
-        return
-    @ staticmethod
-    def run_test(model):
-        return
+    
+    # 对输入数据 inputs 进行 transforms
+    def inputs_pretreament(self, inputs, training):
+        """Conduct transforms on input data.
+
+        Args:
+            inputs: the input data.
+        Returns:
+            tuple: training data including inputs, labels, and some meta data.
+        """
+        
+        # seqs_batch -> [[No.1(seqL_batch, 3, 128, 128), No.2(seqL_batch, 3, 128, 128), ..., No.batchsize(seqL_batch, 3, 128, 128)], [No.1(seqL_batch, 128, 128), No.2(seqL_batch, 128, 128), ..., No.batchsize(seqL_batch, 128, 128)], ...]
+        # labs_batch -> [1, ...]
+        # typs_batch -> ['bg-01', ...]
+        # vies_batch -> ['000', ...]
+        # seqL_batch -> 如果为 fixed -> 则为 None, 如果为 unfixed -> np.asarray: seq length of each batch 
+        seqs_batch, labs_batch, typs_batch, vies_batch, seqL_batch = inputs
+        
+        seq_trfs = self.train_transform if training else self.evaluator_transform
+        if len(seqs_batch) != len(seq_trfs):
+            raise ValueError(
+                "The number of types of input data and transform should be same. But got {} and {}".format(len(seqs_batch), len(seq_trfs)))
+        
+        requires_grad = bool(training)
+        
+        # 一个 transform 实例（single 或 compose ）对应一个序列类型
+        # seqs -> [torch.Size([batch, seqL, 3, 128, 128]), torch.Size([batch, seqL, 128, 128]), ...]
+        seqs = [np2var(np.asarray([trf(fra) for fra in seq]), requires_grad=requires_grad).float()
+                for trf, seq in zip(seq_trfs, seqs_batch)]
+
+        typs = typs_batch
+        vies = vies_batch
+        labs = list2var(labs_batch).long()
+
+        if seqL_batch is not None:
+            seqL_batch = np2var(seqL_batch).int()
+        seqL = seqL_batch
+
+        if seqL is not None:
+            seqL_sum = int(seqL.sum().data.cpu().numpy())
+            ipts = [_[:, :seqL_sum] for _ in seqs]
+        else:
+            ipts = seqs
+        del seqs
+        # ipts -> [torch.Size([batch, seqL, 3, 128, 128]), torch.Size([batch, seqL, 128, 128]), ...]
+        # labs -> tensor([1, ...]
+        # typs -> ['bg-01', ...]
+        # vies -> ['000', ...]
+        # seqL -> 如果为 fixed -> 则为 None, 如果为 unfixed -> np.asarray: seq length of each batch 
+        return ipts, labs, typs, vies, seqL
+
+    # 进行 loss_sum.backward(), self.optimizer.step() and self.scheduler.step()
+    def train_step(self, loss_sum) -> bool:
+        """Conduct loss_sum.backward(), self.optimizer.step() and self.scheduler.step().
+
+        Args:
+            loss_sum:The loss of the current batch.
+        Returns:
+            bool: True if the training is finished, False otherwise.
+        """
+
+        self.optimizer.zero_grad()
+        if loss_sum <= 1e-9:
+            self.msg_mgr.log_warning(
+                "Find the loss sum less than 1e-9 but the training process will continue!")
+
+        # float16, 梯度缩放，加快训练速度
+        if self.engine_cfg['enable_float16']:
+            self.Scaler.scale(loss_sum).backward()
+            self.Scaler.step(self.optimizer)
+            scale = self.Scaler.get_scale()
+            self.Scaler.update()
+            # Warning caused by optimizer skip when NaN
+            # 当出现 NaN 时，optimizer 跳过引起的警告
+            # https://discuss.pytorch.org/t/optimizer-step-before-lr-scheduler-step-error-using-gradscaler/92930/5
+            if scale != self.Scaler.get_scale():
+                self.msg_mgr.log_debug("Training step skip. Expected the former scale equals to the present, got {} and {}".format(
+                    scale, self.Scaler.get_scale()))
+                return False
+        else:
+            loss_sum.backward()
+            self.optimizer.step()
+
+        self.iteration += 1
+        self.scheduler.step()
+        return True
+
+    # model inference
+    def inference(self, rank):
+        """Inference all the test data.
+
+        Args:
+            rank: the rank of the current process.Transform
+        Returns:
+            Odict: contains the inference results.
+        """
+        total_size = len(self.test_loader)
+        if rank == 0:
+            pbar = tqdm(total=total_size, desc='Transforming')
+        else:
+            pbar = NoOp()
+        batch_size = self.test_loader.batch_sampler.batch_size
+        rest_size = total_size
+        # info_dict: 推理的结果
+        info_dict = Odict()
+    
+        for inputs in self.test_loader:
+            # 对输入数据 inputs 进行 transforms
+            ipts = self.inputs_pretreament(inputs, training=False)
+            with autocast(enabled=self.engine_cfg['enable_float16']):
+                # model 推理
+                # 调用 model 子类的 "forward" 方法
+                retval = self.student.forward(ipts)
+                inference_feat = retval['inference_feat']
+                for k, v in inference_feat.items():
+                    # 分布式
+                    inference_feat[k] = ddp_all_gather(v, requires_grad=False)
+                del retval
+            for k, v in inference_feat.items():
+                inference_feat[k] = ts2np(v)
+            info_dict.append(inference_feat)
+            rest_size -= batch_size
+            if rest_size >= 0:
+                update_size = batch_size
+            else:
+                update_size = total_size % batch_size
+            pbar.update(update_size)
+        pbar.close()
+        for k, v in info_dict.items():
+            v = np.concatenate(v)[:total_size]
+            info_dict[k] = v
+        return info_dict
+    
+    def run_train(self):
+        """Accept the instance object(model) here, and then run the train loop."""
+
+        # inputs[0] -> [[No.1(seqL_batch, 3, 128, 128), No.2(seqL_batch, 3, 128, 128), ..., No.batchsize(seqL_batch, 3, 128, 128)], [No.1(seqL_batch, 128, 128), No.2(seqL_batch, 128, 128), ..., No.batchsize(seqL_batch, 128, 128)], ...]
+        # inputs[1] -> [1, ...]
+        # inputs[2] -> ['bg-01', ...]
+        # inputs[3] -> ['000', ...]
+        # inputs[4] -> batch[4] ->->  如果为fixed -> 则为None, 如果为 unfixed -> np.asarray: seq length of each batch 
+        for inputs in self.train_loader:
+            
+            # 对输入数据进行 transforms
+            # len(ipts): 5
+            ipts = self.inputs_pretreament(inputs, training=True)
+            with autocast(enabled=self.engine_cfg['enable_float16']):
+                # 运行 model
+                retval = self.student(ipts)
+                training_feat, visual_summary = retval['training_feat'], retval['visual_summary']
+                del retval
+            # 计算 loss
+            loss_sum, loss_info = self.loss_aggregator(training_feat)
+            ok = self.train_step(loss_sum)
+            if not ok:
+                # 跳出当前循环
+                continue
+
+            visual_summary.update(loss_info) # 更新 "loss_info" to "visual_summary" dict
+            visual_summary['scalar/learning_rate'] = self.optimizer.param_groups[0]['lr']
+            self.msg_mgr.train_step(loss_info, visual_summary)
+            
+            if self.iteration % self.engine_cfg['save_iter'] == 0:
+                # 保存 checkpoint
+                self.save_ckpt(self.student, self.iteration)
+
+                # 如果 "with_test" 为 true， 运行 test 步骤
+                if self.engine_cfg['with_test']:
+                    self.msg_mgr.log_info("Running test...")
+                    self.student.eval()
+                    result_dict = self.run_test()
+                    self.student.train()
+                    if self.cfgs['trainer_cfg']['fix_BN']:
+                        self.fix_BN()
+                    if result_dict:
+                        self.msg_mgr.write_to_tensorboard(result_dict)
+                    self.msg_mgr.reset_time()
+            if self.iteration >= self.engine_cfg['total_iter']:
+                break
+
+    def run_test(self):
+        """Accept the instance object(model) here, and then run the test loop."""
+
+        rank = torch.distributed.get_rank()
+        with torch.no_grad():
+            info_dict = self.inference(rank)
+        if rank == 0:
+            loader = self.test_loader
+            label_list = loader.dataset.label_list
+            types_list = loader.dataset.types_list
+            views_list = loader.dataset.views_list
+
+            info_dict.update({
+                'labels': label_list, 'types': types_list, 'views': views_list})
+
+            if 'eval_func' in self.cfgs["evaluator_cfg"].keys():
+                eval_func = self.cfgs['evaluator_cfg']["eval_func"]
+            else:
+                eval_func = 'identification'
+            # 获取 evaluate 函数
+            eval_func = getattr(eval_functions, eval_func)
+            valid_args = get_valid_args(
+                eval_func, self.cfgs["evaluator_cfg"], ['metric'])
+            
+            try:
+                dataset_name = self.cfgs['data_cfg']['test_dataset_name']
+            except:
+                dataset_name = self.cfgs['data_cfg']['dataset_name']
+            # 评估
+            return eval_func(info_dict, dataset_name, **valid_args)
