@@ -87,7 +87,7 @@ def single_view_gallery_evaluation(feature, label, seq_type, view, dataset, metr
     msg_mgr = get_msg_mgr()
     acc = {}
     view_list = sorted(np.unique(view))
-    num_rank = 1
+    num_rank = 5 # rank-5
     if dataset == 'CASIA-E':
         view_list.remove("270")
     if dataset == 'SUSTech1K':
