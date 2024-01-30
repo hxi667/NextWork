@@ -232,14 +232,15 @@ class BuildModel():
         if torch.distributed.get_rank() == 0:
             mkdir(osp.join(self.save_path, "checkpoints/"))
             save_name = self.engine_cfg['save_name']
+            model_state_dict = model.module.state_dict() #if self.is_parallel else model.state_dict()
             checkpoint = {
-                'model': model.state_dict(),
+                'model': model_state_dict,
                 'optimizer': self.optimizer.state_dict(),
                 'scheduler': self.scheduler.state_dict(),
                 'iteration': iteration}
             torch.save(checkpoint,
                         osp.join(self.save_path, 'checkpoints/{}-{:0>5}.pt'.format(save_name, iteration)))
-
+          
     # load checkpoint
     def _load_ckpt(self, save_name, model):
 
@@ -407,7 +408,7 @@ class BuildModel():
             with autocast(enabled=self.engine_cfg['enable_float16']):
                 # model 推理
                 # 调用 model 子类的 "forward" 方法
-                retval = self.student.forward(ipts)
+                retval = self.student(ipts, training=False)
                 inference_feat = retval['inference_feat']
                 for k, v in inference_feat.items():
                     # 分布式
@@ -474,7 +475,7 @@ class BuildModel():
                     self.msg_mgr.reset_time()
             if self.iteration >= self.engine_cfg['total_iter']:
                 break
-
+    
     def run_test(self):
         """Accept the instance object(model) here, and then run the test loop."""
 
@@ -505,3 +506,5 @@ class BuildModel():
                 dataset_name = self.cfgs['data_cfg']['dataset_name']
             # 评估
             return eval_func(info_dict, dataset_name, **valid_args)
+    
+

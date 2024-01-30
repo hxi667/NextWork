@@ -20,7 +20,7 @@
                 "--cfgs",
                 "./configs/gaitgl/student_gaitgl.yaml",
                 "--phase",
-                "train",
+                "test",
                 "--log_to_file",
             ],
             "env": {

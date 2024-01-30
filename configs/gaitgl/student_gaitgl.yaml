@@ -38,14 +38,18 @@ trainer_cfg:
 evaluator_cfg:
   enable_float16: false
   restore_ckpt_strict: true
-  restore_hint: 10000
+  restore_hint: 80000
   save_name: GaitGL
+  eval_func: evaluate_indoor_dataset
   sampler:
     batch_size: 8 # the batch_size should be equal to the gpus number at the test phase!!!
     sample_type: all_ordered
     type: InferenceSampler
   transform:
     - type: BaseSilCuttingTransform
+  metric: euc # cos
+  cross_view_gallery: false
+
 
 
 loss_cfg:

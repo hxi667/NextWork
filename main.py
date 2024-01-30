@@ -4,10 +4,11 @@ import yaml
 import os
 import argparse
 import torch
+import torch.nn as nn
 
 from modeling.build_models import BuildModel
 
-from utils.common import init_seeds
+from utils.common import init_seeds, params_count, get_ddp_module
 from utils.msg_manager import get_msg_mgr
 
 
@@ -26,6 +27,7 @@ parser.add_argument('--fc_out', default=1, type=int, help='if immediate output f
 parser.add_argument('--pool_out', default="max", type=str, help='the type of pooling layer of output')
 
 args = parser.parse_args()
+
 
 
 # init SummaryWriter and logger(to tensorboard, console and file print log info)， random seeds
@@ -66,6 +68,8 @@ if __name__ == '__main__':
     # ================= Init SummaryWriter, Logger and Random Seeds ================ #
     init(cfgs, training)
 
+    
+    
     build_models = BuildModel(cfgs, training)
     
     if training:
