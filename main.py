@@ -4,11 +4,10 @@ import yaml
 import os
 import argparse
 import torch
-import torch.nn as nn
 
 from modeling.build_models import BuildModel
 
-from utils.common import init_seeds, params_count, get_ddp_module
+from utils.common import init_seeds
 from utils.msg_manager import get_msg_mgr
 
 
@@ -68,7 +67,6 @@ if __name__ == '__main__':
     # ================= Init SummaryWriter, Logger and Random Seeds ================ #
     init(cfgs, training)
 
-    
     
     build_models = BuildModel(cfgs, training)
     

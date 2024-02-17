@@ -15,7 +15,7 @@ from utils.common import NoOp, Odict, get_valid_args, get_attr_from, np2var, lis
 from utils.common import params_count, mkdir, get_ddp_module,  ddp_all_gather
 
 
-from modeling.teachers_student import get_teachers_student
+from modeling.teachers_student import get_teachers_student, selector_teacher, selector_output
 from modeling.loss_aggregator import LossAggregator
 from modeling.losses import get_loss
 from modeling.losses.discriminatorloss import discriminatorLoss, discriminatorFakeLoss
@@ -447,6 +447,15 @@ class BuildModel():
                 retval = self.student(ipts)
                 training_feat, visual_summary = retval['training_feat'], retval['visual_summary']
                 del retval
+                
+                # Get teacher model
+                teacher = selector_teacher(self.teachers)
+                # Get output from teacher model
+                answers = teacher(ipts)
+
+                # Select output from student and teacher
+                outputs, answers = selector_output(outputs, answers, eval(args.out_layer))
+            
             # 计算 loss
             loss_sum, loss_info = self.loss_aggregator(training_feat)
             ok = self.train_step(loss_sum)

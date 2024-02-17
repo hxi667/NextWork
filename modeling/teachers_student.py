@@ -99,3 +99,4 @@ def selector_teacher(teachers):
 # Select output from student and teacher
 def selector_output(outputs, answers, idx):
     return [outputs[i] for i in idx], [answers[i] for i in idx]
+    
