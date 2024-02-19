@@ -24,23 +24,23 @@ args = parser.parse_args()
 
 # init SummaryWriter and logger(to tensorboard, console and file print log info)， random seeds
 def init(cfgs, training):
-    # 获得 MessageManager 类的实例对象
+    # get MessageManager class的实例对象
     msg_mgr = get_msg_mgr()
     engine_cfg = cfgs['trainer_cfg'] if training else cfgs['evaluator_cfg'] 
 
     output_path = os.path.join('output/', cfgs['data_cfg']['dataset_name'], 'Student_'+ cfgs['model_cfg']['student'], engine_cfg['save_name'])
     if training:
-        # 初始化 SummaryWriter 和 logger
+        # init SummaryWriter 和 logger
         msg_mgr.init_manager(output_path, args.log_to_file, engine_cfg['log_iter'],
                              engine_cfg['restore_hint'] if isinstance(engine_cfg['restore_hint'], (int)) else 0)
     else:
-        # 初始化 logger
+        # init logger
         msg_mgr.init_logger(output_path, args.log_to_file)
     # 写 trainer 或 evaluator 的配置信息到 console/file 
     msg_mgr.log_info(engine_cfg)
 
     seed = torch.distributed.get_rank()
-    # 初始化随机种子
+    # init seeds
     init_seeds(seed)
     
 
