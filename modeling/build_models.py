@@ -78,10 +78,8 @@ class BuildModel():
         self.msg_mgr.log_info("Student: ")
         self.msg_mgr.log_info([self.student.__name__])
 
-        
-        # TODO
-        dims = [10]
-        # dims = [student.out_dims[i] for i in eval(args.out_layer)]
+        # #
+        dims = [self.student.model_cfg['out_dims'][i] for i in self.cfgs['model_cfg']['out_layer']]
         self.msg_mgr.log_info(["student dims: ", dims])
 
         self.update_parameters = [{'params': self.student.parameters()}]

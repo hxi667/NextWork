@@ -14,12 +14,14 @@ class Baseline(nn.Module):
         self.restore_hint = 0
         self.load_ckpt_strict = True
 
-        self.Backbone = self.get_backbone(model_cfg['backbone_cfg'])
+        self.model_cfg = model_cfg
+
+        self.Backbone = self.get_backbone(self.model_cfg['backbone_cfg'])
         self.Backbone = SetBlockWrapper(self.Backbone)
-        self.FCs = SeparateFCs(**model_cfg['SeparateFCs'])
-        self.BNNecks = SeparateBNNecks(**model_cfg['SeparateBNNecks'])
+        self.FCs = SeparateFCs(**self.model_cfg['SeparateFCs'])
+        self.BNNecks = SeparateBNNecks(**self.model_cfg['SeparateBNNecks'])
         self.TP = PackSequenceWrapper(torch.max)
-        self.HPP = HorizontalPoolingPyramid(bin_num=model_cfg['bin_num'])
+        self.HPP = HorizontalPoolingPyramid(bin_num=self.model_cfg['bin_num'])
 
 
     # 获取 backbone model

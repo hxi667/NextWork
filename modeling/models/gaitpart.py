@@ -88,12 +88,14 @@ class GaitPart(nn.Module):
         self.restore_hint = 0
         self.load_ckpt_strict = True
 
-        self.Backbone = self.get_backbone(model_cfg['backbone_cfg'])
-        head_cfg = model_cfg['SeparateFCs']
-        self.Head = SeparateFCs(**model_cfg['SeparateFCs'])
+        self.model_cfg = model_cfg
+
+        self.Backbone = self.get_backbone( self.model_cfg['backbone_cfg'])
+        head_cfg =  self.model_cfg['SeparateFCs']
+        self.Head = SeparateFCs(** self.model_cfg['SeparateFCs'])
         self.Backbone = SetBlockWrapper(self.Backbone)
         self.HPP = SetBlockWrapper(
-            HorizontalPoolingPyramid(bin_num=model_cfg['bin_num']))
+            HorizontalPoolingPyramid(bin_num= self.model_cfg['bin_num']))
         self.TFA = PackSequenceWrapper(TemporalFeatureAggregator(
             in_channels=head_cfg['in_channels'], parts_num=head_cfg['parts_num']))
 

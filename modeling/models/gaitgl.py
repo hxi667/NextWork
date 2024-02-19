@@ -72,9 +72,11 @@ class GaitGL(nn.Module):
 
         self.restore_hint = 0
         self.load_ckpt_strict = True
-
-        in_c = model_cfg['channels']
-        class_num = model_cfg['class_num']
+        
+        self.model_cfg = model_cfg
+        
+        in_c = self.model_cfg['channels']
+        class_num = self.model_cfg['class_num']
         
         
         if dataset_name in ['OUMVLP', 'GREW']:
@@ -142,8 +144,8 @@ class GaitGL(nn.Module):
 
         self.Head0 = SeparateFCs(64, in_c[-1], in_c[-1])
 
-        if 'SeparateBNNecks' in model_cfg.keys():
-            self.BNNecks = SeparateBNNecks(**model_cfg['SeparateBNNecks'])
+        if 'SeparateBNNecks' in self.model_cfg.keys():
+            self.BNNecks = SeparateBNNecks(**self.model_cfg['SeparateBNNecks'])
             self.Bn_head = False
         else:
             self.Bn = nn.BatchNorm1d(in_c[-1])
@@ -189,7 +191,7 @@ class GaitGL(nn.Module):
         n, _, s, h, w = sils.size()
         retval = {
             'training_feat': {
-                'triplet': {'embeddings': [embed], 'labels': labs},
+                'triplet': {'embeddings': embed, 'labels': labs},
                 'softmax': {'logits': logi, 'labels': labs}
             },
             'visual_summary': {

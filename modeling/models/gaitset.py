@@ -18,7 +18,9 @@ class GaitSet(nn.Module):
         self.restore_hint = 0
         self.load_ckpt_strict = True
 
-        in_c = model_cfg['in_channels']
+        self.model_cfg = model_cfg
+
+        in_c = self.model_cfg['in_channels']
         self.set_block1 = nn.Sequential(BasicConv2d(in_c[0], in_c[1], 5, 1, 2),
                                         nn.LeakyReLU(inplace=True),
                                         BasicConv2d(in_c[1], in_c[1], 3, 1, 1),
@@ -45,9 +47,9 @@ class GaitSet(nn.Module):
 
         self.set_pooling = PackSequenceWrapper(torch.max)
 
-        self.Head = SeparateFCs(**model_cfg['SeparateFCs'])
+        self.Head = SeparateFCs(**self.model_cfg['SeparateFCs'])
 
-        self.HPP = HorizontalPoolingPyramid(bin_num=model_cfg['bin_num'])
+        self.HPP = HorizontalPoolingPyramid(bin_num=self.model_cfg['bin_num'])
 
     def forward(self, inputs):
         ipts, labs, _, _, seqL = inputs
