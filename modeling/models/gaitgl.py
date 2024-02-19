@@ -189,7 +189,7 @@ class GaitGL(nn.Module):
         n, _, s, h, w = sils.size()
         retval = {
             'training_feat': {
-                'triplet': {'embeddings': embed, 'labels': labs},
+                'triplet': {'embeddings': [embed], 'labels': labs},
                 'softmax': {'logits': logi, 'labels': labs}
             },
             'visual_summary': {
@@ -202,9 +202,16 @@ class GaitGL(nn.Module):
         return retval
 
 
-def gaitGL():
-    model_cfg = {
+def gaitGL(model_cfg):
+
+    gaitGL_cfg = {
         'channels': [32, 64, 128],
         'class_num': 74
     }
-    return GaitGL(model_cfg, "CASIA-B")
+
+    keys_to_merge = ['fc_out', 'pool_out', 'out_layer', 'out_dims'] 
+
+    merged_dict = {key: model_cfg[key] for key in keys_to_merge if key in model_cfg}
+    merged_dict.update(gaitGL_cfg)  
+
+    return GaitGL(merged_dict, "CASIA-B")

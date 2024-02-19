@@ -148,8 +148,8 @@ class GaitPart(nn.Module):
         return retval
 
 
-def gaitPart():
-    model_cfg = {
+def gaitPart(model_cfg):
+    gaitPart_cfg = {
         'backbone_cfg': {
             'type': 'Plain',
             'in_channels': 1,
@@ -162,4 +162,11 @@ def gaitPart():
         },
         'bin_num': 16
     }
-    return GaitPart(model_cfg)
+
+    keys_to_merge = ['fc_out', 'pool_out', 'out_layer', 'out_dims'] 
+
+    merged_dict = {key: model_cfg[key] for key in keys_to_merge if key in model_cfg}
+    merged_dict.update(gaitPart_cfg)  
+
+    return GaitPart(merged_dict)
+

@@ -18,13 +18,6 @@ parser.add_argument('--cfgs', type=str, default='./configs/default.yaml', help="
 parser.add_argument('--phase', default='train', choices=['train', 'test'], help="choose train or test phase")
 parser.add_argument('--log_to_file', action='store_true', help="log to file, default path is: output/<dataset>/<Student_name>/<save_name>/<logs>/<Datetime>.txt")
 
-#  ============================================================
-parser.add_argument('--out_layer', default="[-1]", type=str, help='the type of pooling layer of output')  # eval()
-# model config
-parser.add_argument('--out_dims', default="[5000,1000,500,200,10]", type=str, help='the dims of output pooling layers')  # eval()
-parser.add_argument('--fc_out', default=1, type=int, help='if immediate output from fc-layer')
-parser.add_argument('--pool_out', default="max", type=str, help='the type of pooling layer of output')
-
 args = parser.parse_args()
 
 

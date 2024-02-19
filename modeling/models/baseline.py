@@ -78,8 +78,8 @@ class Baseline(nn.Module):
         return retval
     
 
-def baseline_ResNet9():
-    model_cfg = {
+def baseline_ResNet9(model_cfg):
+    baseline_ResNet9_cfg = {
         'backbone_cfg': {
             'type': "ResNet9",
             'block': "BasicBlock",
@@ -100,4 +100,11 @@ def baseline_ResNet9():
         },
         'bin_num': 16
     }
-    return Baseline(model_cfg)
+
+    keys_to_merge = ['fc_out', 'pool_out', 'out_layer', 'out_dims'] 
+
+    merged_dict = {key: model_cfg[key] for key in keys_to_merge if key in model_cfg}
+    merged_dict.update(baseline_ResNet9_cfg)  
+
+    return Baseline(merged_dict)
+

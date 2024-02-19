@@ -47,7 +47,7 @@ class BuildModel():
             raise Exception("Initialize a model without -Engine-Cfgs-")
 
         # ================= Data Loader ================ #
-        self.msg_mgr.log_info('==> ==> Preparing Data..')
+        self.msg_mgr.log_info('==> ==> Preparing Data...')
         self.msg_mgr.log_info(cfgs['data_cfg'])
 
         if self.training:
@@ -444,20 +444,24 @@ class BuildModel():
             ipts = self.inputs_pretreament(inputs, training=True)
             with autocast(enabled=self.engine_cfg['enable_float16']):
                 # 运行 model
-                retval = self.student(ipts)
-                training_feat, visual_summary = retval['training_feat'], retval['visual_summary']
-                del retval
+                student_retval = self.student(ipts)
+                student_training_feat, visual_summary = student_retval['training_feat'], student_retval['visual_summary']
+                del student_retval
                 
                 # Get teacher model
                 teacher = selector_teacher(self.teachers)
                 # Get output from teacher model
-                answers = teacher(ipts)
+                teacher_retval = teacher(ipts)
+                teacher_training_feat = teacher_retval['training_feat']
+                del teacher_retval
 
                 # Select output from student and teacher
-                outputs, answers = selector_output(outputs, answers, eval(args.out_layer))
+                student_embedding, teacher_embedding = selector_output(student_training_feat["triplet"]["embeddings"],
+                                                                        teacher_training_feat["triplet"]["embeddings"],
+                                                                        self.cfgs['model_cfg']['out_layer'])
             
             # 计算 loss
-            loss_sum, loss_info = self.loss_aggregator(training_feat)
+            loss_sum, loss_info = self.loss_aggregator(student_training_feat)
             ok = self.train_step(loss_sum)
             if not ok:
                 # 跳出当前循环

@@ -121,3 +121,13 @@ model_cfg:
     adv: true  # add discriminator or not
     grl: false  # 反向传播时，梯度取反
     d_lr: 0.1 # discriminator learning rate
+  fc_out: true # if immediate output from fc-layer
+  pool_out: max  # the type of pooling layer of output, max or avg
+  out_layer:
+    - -1
+  out_dims: # the dims of output pooling layers
+    - 5000
+    - 1000
+    - 500
+    - 200 
+    - 10

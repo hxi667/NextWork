@@ -57,7 +57,7 @@ def get_teachers_student(model_cfg, dataset_name, device):
     # Add teachers models into teacher model list
     for t in model_cfg["teachers"]:
         if t['name'] in model_map:
-            net = model_map[t['name']]()  # eg: GaitSet()
+            net = model_map[t['name']](model_cfg)  # eg: GaitSet()
             net.__name__ = t['name']
             net.restore_hint = t['restore_hint']
             net.load_ckpt_strict = t['load_ckpt_strict']
@@ -83,7 +83,7 @@ def get_teachers_student(model_cfg, dataset_name, device):
 
     # Student setup
     assert model_cfg["student"] in model_map, "Student must be in %s" % " ".join(model_map.keys)
-    student = model_map[model_cfg["student"]]() # eg: GaitSet()
+    student = model_map[model_cfg["student"]](model_cfg) # eg: GaitSet()
     student.__name__ = model_cfg["student"]
     student = student.to(device=torch.device("cuda", device))
     
