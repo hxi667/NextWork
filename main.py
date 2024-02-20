@@ -36,7 +36,7 @@ def init(cfgs, training):
     else:
         # init logger
         msg_mgr.init_logger(output_path, args.log_to_file)
-    # 写 trainer 或 evaluator 的配置信息到 console/file 
+    # write trainer or evaluator config info to console/file 
     msg_mgr.log_info(engine_cfg)
 
     seed = torch.distributed.get_rank()

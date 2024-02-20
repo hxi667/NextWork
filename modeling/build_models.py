@@ -113,7 +113,7 @@ class BuildModel():
             # for Generator
             loss_generator = get_loss(cfgs['loss_map']['loss'])
             # loss between student and teacher
-            self.criterion = betweenLoss(cfgs['loss_map']['gamma'], loss=loss_generator)
+            self.between_criterion = betweenLoss(cfgs['loss_map']['gamma'], loss=loss_generator)
 
             # for Discriminator
             if cfgs['model_cfg']['discriminator']['adv']:
@@ -127,6 +127,7 @@ class BuildModel():
 
 
         # if "training" == true, training model, if not, evaluation model
+        self.training = False   
         self.student.train(self.training)
         for teacher in self.teachers:
             teacher.train(self.training)
@@ -429,7 +430,7 @@ class BuildModel():
     
     def run_train(self):
         """Accept the instance object(model) here, and then run the train loop."""
-
+        self.msg_mgr.log_info("Run train...")
         # inputs[0] -> [[No.1(seqL_batch, 3, 128, 128), No.2(seqL_batch, 3, 128, 128), ..., No.batchsize(seqL_batch, 3, 128, 128)], [No.1(seqL_batch, 128, 128), No.2(seqL_batch, 128, 128), ..., No.batchsize(seqL_batch, 128, 128)], ...]
         # inputs[1] -> [1, ...]
         # inputs[2] -> ['bg-01', ...]
@@ -441,7 +442,7 @@ class BuildModel():
             # len(ipts): 5
             ipts = self.inputs_pretreament(inputs, training=True)
             with autocast(enabled=self.engine_cfg['enable_float16']):
-                # 运行 model
+                # run model
                 student_retval = self.student(ipts)
                 student_training_feat, visual_summary = student_retval['training_feat'], student_retval['visual_summary']
                 del student_retval
@@ -452,22 +453,29 @@ class BuildModel():
                 teacher_retval = teacher(ipts)
                 teacher_training_feat = teacher_retval['training_feat']
                 del teacher_retval
-
+                # TODO
                 # Select output from student and teacher
                 student_embedding, teacher_embedding = selector_output(student_training_feat["triplet"]["embeddings"],
                                                                         teacher_training_feat["triplet"]["embeddings"],
                                                                         self.cfgs['model_cfg']['out_layer'])
             
-            # 计算 loss
-            loss_sum, loss_info = self.loss_aggregator(student_training_feat)
-            ok = self.train_step(loss_sum)
+            # Calculate student loss
+            student_loss_sum, student_loss_info = self.loss_aggregator(student_training_feat)
+            # Calculate loss between student and teacher
+            between_loss = self.between_criterion(student_embedding, teacher_embedding)
+            # Calculate loss for discriminators
+            d_loss = self.discriminators_criterion(student_embedding, teacher_embedding)
+            # Get total loss
+            total_loss = student_loss_sum + between_loss + d_loss
+        
+            ok = self.train_step(total_loss)
             if not ok:
                 # 跳出当前循环
                 continue
 
-            visual_summary.update(loss_info) # 更新 "loss_info" to "visual_summary" dict
+            visual_summary.update(student_loss_info) # 更新 "loss_info" to "visual_summary" dict
             visual_summary['scalar/learning_rate'] = self.optimizer.param_groups[0]['lr']
-            self.msg_mgr.train_step(loss_info, visual_summary)
+            self.msg_mgr.train_step(student_loss_info, visual_summary)
             
             if self.iteration % self.engine_cfg['save_iter'] == 0:
                 # 保存 checkpoint
@@ -489,7 +497,8 @@ class BuildModel():
     
     def run_test(self):
         """Accept the instance object(model) here, and then run the test loop."""
-
+        self.msg_mgr.log_info("Run test...")
+        
         rank = torch.distributed.get_rank()
         with torch.no_grad():
             info_dict = self.inference(rank)
