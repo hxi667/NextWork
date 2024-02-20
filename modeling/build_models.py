@@ -140,29 +140,29 @@ class BuildModel():
             self.resume_ckpt(restore_hint, self.student)
         
 
-        # 如果为 True, 应用 Batch Normalization synchronously， 通常在分布式训练中使用，以确保不同 GPU 上的批量归一化参数同步
-        if self.training and cfgs['trainer_cfg']['sync_BN']:
-            self.student = nn.SyncBatchNorm.convert_sync_batchnorm(self.student)
-            for teacher in self.teachers:
-                teacher = nn.SyncBatchNorm.convert_sync_batchnorm(teacher)
-            for discriminator in self.discriminators.discriminators:
-                discriminator = nn.SyncBatchNorm.convert_sync_batchnorm(discriminator)
+        # # 如果为 True, 应用 Batch Normalization synchronously， 通常在分布式训练中使用，以确保不同 GPU 上的批量归一化参数同步
+        # if self.training and cfgs['trainer_cfg']['sync_BN']:
+        #     self.student = nn.SyncBatchNorm.convert_sync_batchnorm(self.student)
+        #     for teacher in self.teachers:
+        #         teacher = nn.SyncBatchNorm.convert_sync_batchnorm(teacher)
+        #     for discriminator in self.discriminators.discriminators:
+        #         discriminator = nn.SyncBatchNorm.convert_sync_batchnorm(discriminator)
         
-        # if True, fix BatchNorm layer weights
-        if cfgs['trainer_cfg']['fix_BN']:
-             self.fix_BN(self.student)
-             for teacher in self.teachers:
-                self.fix_BN(teacher)
-             for discriminator in self.discriminators.discriminators:
-                self.fix_BN(discriminator)
+        # # if True, fix BatchNorm layer weights
+        # if cfgs['trainer_cfg']['fix_BN']:
+        #      self.fix_BN(self.student)
+        #      for teacher in self.teachers:
+        #         self.fix_BN(teacher)
+        #      for discriminator in self.discriminators.discriminators:
+        #         self.fix_BN(discriminator)
 
-        # 经过分布式数据并行 (DDP) 化处理的model
-        find_unused_parameters = cfgs['trainer_cfg']['find_unused_parameters']  
-        self.student = get_ddp_module(self.student, find_unused_parameters)
-        # for teacher in self.teachers:
-        #     teacher = get_ddp_module(teacher, find_unused_parameters)
-        for discriminator in self.discriminators.discriminators:
-            discriminator = get_ddp_module(discriminator, find_unused_parameters)
+        # # 经过分布式数据并行 (DDP) 化处理的model
+        # find_unused_parameters = cfgs['trainer_cfg']['find_unused_parameters']  
+        # self.student = get_ddp_module(self.student, find_unused_parameters)
+        # # for teacher in self.teachers:
+        # #     teacher = get_ddp_module(teacher, find_unused_parameters)
+        # for discriminator in self.discriminators.discriminators:
+        #     discriminator = get_ddp_module(discriminator, find_unused_parameters)
 
 
         self.msg_mgr.log_info("Build Model Finished!")
@@ -428,27 +428,28 @@ class BuildModel():
             info_dict[k] = v
         return info_dict
     
-    def run_train(self):
+    @ staticmethod
+    def run_train(model):
         """Accept the instance object(model) here, and then run the train loop."""
-        self.msg_mgr.log_info("Run train...")
+        model.msg_mgr.log_info("Run train...")
         # inputs[0] -> [[No.1(seqL_batch, 3, 128, 128), No.2(seqL_batch, 3, 128, 128), ..., No.batchsize(seqL_batch, 3, 128, 128)], [No.1(seqL_batch, 128, 128), No.2(seqL_batch, 128, 128), ..., No.batchsize(seqL_batch, 128, 128)], ...]
         # inputs[1] -> [1, ...]
         # inputs[2] -> ['bg-01', ...]
         # inputs[3] -> ['000', ...]
         # inputs[4] -> batch[4] ->->  如果为fixed -> 则为None, 如果为 unfixed -> np.asarray: seq length of each batch 
-        for inputs in self.train_loader:
+        for inputs in model.train_loader:
             
             # 对输入数据进行 transforms
             # len(ipts): 5
-            ipts = self.inputs_pretreament(inputs, training=True)
-            with autocast(enabled=self.engine_cfg['enable_float16']):
+            ipts = model.inputs_pretreament(inputs, training=True)
+            with autocast(enabled=model.engine_cfg['enable_float16']):
                 # run model
-                student_retval = self.student(ipts)
+                student_retval = model.student(ipts)
                 student_training_feat, visual_summary = student_retval['training_feat'], student_retval['visual_summary']
                 del student_retval
                 
                 # Get teacher model
-                teacher = selector_teacher(self.teachers)
+                teacher = selector_teacher(model.teachers)
                 # Get output from teacher model
                 teacher_retval = teacher(ipts)
                 teacher_training_feat = teacher_retval['training_feat']
@@ -457,53 +458,54 @@ class BuildModel():
                 # Select output from student and teacher
                 student_embedding, teacher_embedding = selector_output(student_training_feat["triplet"]["embeddings"],
                                                                         teacher_training_feat["triplet"]["embeddings"],
-                                                                        self.cfgs['model_cfg']['out_layer'])
+                                                                        model.cfgs['model_cfg']['out_layer'])
             
             # Calculate student loss
-            student_loss_sum, student_loss_info = self.loss_aggregator(student_training_feat)
+            student_loss_sum, student_loss_info = model.loss_aggregator(student_training_feat)
             # Calculate loss between student and teacher
-            between_loss = self.between_criterion(student_embedding, teacher_embedding)
+            between_loss = model.between_criterion(student_embedding, teacher_embedding)
             # Calculate loss for discriminators
-            d_loss = self.discriminators_criterion(student_embedding, teacher_embedding)
+            d_loss = model.discriminators_criterion(student_embedding, teacher_embedding)
             # Get total loss
             total_loss = student_loss_sum + between_loss + d_loss
         
-            ok = self.train_step(total_loss)
+            ok = model.train_step(total_loss)
             if not ok:
                 # 跳出当前循环
                 continue
 
             visual_summary.update(student_loss_info) # 更新 "loss_info" to "visual_summary" dict
-            visual_summary['scalar/learning_rate'] = self.optimizer.param_groups[0]['lr']
-            self.msg_mgr.train_step(student_loss_info, visual_summary)
+            visual_summary['scalar/learning_rate'] = model.optimizer.param_groups[0]['lr']
+            model.msg_mgr.train_step(student_loss_info, visual_summary)
             
-            if self.iteration % self.engine_cfg['save_iter'] == 0:
+            if model.iteration % model.engine_cfg['save_iter'] == 0:
                 # 保存 checkpoint
-                self.save_ckpt(self.student, self.iteration)
+                model.save_ckpt(model.student, model.iteration)
 
                 # 如果 "with_test" 为 true， 运行 test 步骤
-                if self.engine_cfg['with_test']:
-                    self.msg_mgr.log_info("Running test...")
-                    self.student.eval()
-                    result_dict = self.run_test()
-                    self.student.train()
-                    if self.cfgs['trainer_cfg']['fix_BN']:
-                        self.fix_BN()
+                if model.engine_cfg['with_test']:
+                    model.msg_mgr.log_info("Running test...")
+                    model.student.eval()
+                    result_dict = BuildModel.run_test()
+                    model.student.train()
+                    if model.cfgs['trainer_cfg']['fix_BN']:
+                        model.fix_BN()
                     if result_dict:
-                        self.msg_mgr.write_to_tensorboard(result_dict)
-                    self.msg_mgr.reset_time()
-            if self.iteration >= self.engine_cfg['total_iter']:
+                        model.msg_mgr.write_to_tensorboard(result_dict)
+                    model.msg_mgr.reset_time()
+            if model.iteration >= model.engine_cfg['total_iter']:
                 break
     
-    def run_test(self):
+    @ staticmethod
+    def run_test(model):
         """Accept the instance object(model) here, and then run the test loop."""
-        self.msg_mgr.log_info("Run test...")
+        model.msg_mgr.log_info("Run test...")
         
         rank = torch.distributed.get_rank()
         with torch.no_grad():
-            info_dict = self.inference(rank)
+            info_dict = model.inference(rank)
         if rank == 0:
-            loader = self.test_loader
+            loader = model.test_loader
             label_list = loader.dataset.label_list
             types_list = loader.dataset.types_list
             views_list = loader.dataset.views_list
@@ -511,19 +513,19 @@ class BuildModel():
             info_dict.update({
                 'labels': label_list, 'types': types_list, 'views': views_list})
 
-            if 'eval_func' in self.cfgs["evaluator_cfg"].keys():
-                eval_func = self.cfgs['evaluator_cfg']["eval_func"]
+            if 'eval_func' in model.cfgs["evaluator_cfg"].keys():
+                eval_func = model.cfgs['evaluator_cfg']["eval_func"]
             else:
                 eval_func = 'identification'
             # 获取 evaluate 函数
             eval_func = getattr(eval_functions, eval_func)
             valid_args = get_valid_args(
-                eval_func, self.cfgs["evaluator_cfg"], ['metric'])
+                eval_func, model.cfgs["evaluator_cfg"], ['metric'])
             
             try:
-                dataset_name = self.cfgs['data_cfg']['test_dataset_name']
+                dataset_name = model.cfgs['data_cfg']['test_dataset_name']
             except:
-                dataset_name = self.cfgs['data_cfg']['dataset_name']
+                dataset_name = model.cfgs['data_cfg']['dataset_name']
             # 评估
             return eval_func(info_dict, dataset_name, **valid_args)
     
