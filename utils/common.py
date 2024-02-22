@@ -254,7 +254,7 @@ class DDPPassthrough(DDP):
 
 # 返回一个经过分布式数据并行 (DDP) 化处理的 module
 def get_ddp_module(module, find_unused_parameters=False, **kwargs):
-    # 检查输入 module 是否包含参数（权重和偏置等），如果没有，则直接返回原始 module
+    # 检查输入的 module 中是否包含参数（权重和偏置等），如果没有，则直接返回原始 module
     if len(list(module.parameters())) == 0: 
         return module
     device = torch.cuda.current_device()

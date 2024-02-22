@@ -100,7 +100,7 @@ def baseline_ResNet9(model_cfg):
             'in_channels': 256,
             'parts_num': 16,
         },
-        'bin_num': 16
+        'bin_num': [16]
     }
 
     keys_to_merge = ['fc_out', 'pool_out', 'out_layer', 'out_dims'] 

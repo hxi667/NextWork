@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 from utils.msg_manager import get_msg_mgr
 from utils.common import NoOp, Odict, get_valid_args, get_attr_from, np2var, list2var, ts2np
-from utils.common import params_count, mkdir, get_ddp_module,  ddp_all_gather
+from utils.common import params_count, mkdir, ddp_all_gather
 
 
 from modeling.teachers_student import get_teachers_student, selector_teacher, selector_output
@@ -93,12 +93,15 @@ class BuildModel():
         
         # init parameters
         self.init_parameters(self.student)
-        for teacher in self.teachers:
-            self.init_parameters(teacher) 
         for discriminator in self.discriminators.discriminators:
             self.init_parameters(discriminator) 
 
-        # count teachers and  discriminators parameters
+        restore_hint = self.engine_cfg['restore_hint']
+        if restore_hint != 0:
+            # 从 checkpoint 恢复
+            self.resume_ckpt(restore_hint, self.student)
+
+        # count teachers and discriminators parameters
         for teacher in self.teachers:
             self.msg_mgr.log_info(params_count(teacher))
         for discriminator in self.discriminators.discriminators:
@@ -127,43 +130,9 @@ class BuildModel():
 
 
         # if "training" == true, training model, if not, evaluation model
-        self.training = False   
         self.student.train(self.training)
-        for teacher in self.teachers:
-            teacher.train(self.training)
         for discriminator in self.discriminators.discriminators:
             discriminator.train(self.training)
-
-        restore_hint = self.engine_cfg['restore_hint']
-        if restore_hint != 0:
-            # 从 checkpoint 恢复
-            self.resume_ckpt(restore_hint, self.student)
-        
-
-        # # 如果为 True, 应用 Batch Normalization synchronously， 通常在分布式训练中使用，以确保不同 GPU 上的批量归一化参数同步
-        # if self.training and cfgs['trainer_cfg']['sync_BN']:
-        #     self.student = nn.SyncBatchNorm.convert_sync_batchnorm(self.student)
-        #     for teacher in self.teachers:
-        #         teacher = nn.SyncBatchNorm.convert_sync_batchnorm(teacher)
-        #     for discriminator in self.discriminators.discriminators:
-        #         discriminator = nn.SyncBatchNorm.convert_sync_batchnorm(discriminator)
-        
-        # # if True, fix BatchNorm layer weights
-        # if cfgs['trainer_cfg']['fix_BN']:
-        #      self.fix_BN(self.student)
-        #      for teacher in self.teachers:
-        #         self.fix_BN(teacher)
-        #      for discriminator in self.discriminators.discriminators:
-        #         self.fix_BN(discriminator)
-
-        # # 经过分布式数据并行 (DDP) 化处理的model
-        # find_unused_parameters = cfgs['trainer_cfg']['find_unused_parameters']  
-        # self.student = get_ddp_module(self.student, find_unused_parameters)
-        # # for teacher in self.teachers:
-        # #     teacher = get_ddp_module(teacher, find_unused_parameters)
-        # for discriminator in self.discriminators.discriminators:
-        #     discriminator = get_ddp_module(discriminator, find_unused_parameters)
-
 
         self.msg_mgr.log_info("Build Model Finished!")
 

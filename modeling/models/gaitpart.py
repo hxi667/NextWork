@@ -162,7 +162,7 @@ def gaitPart(model_cfg):
             'out_channels': 128,
             'parts_num': 16,
         },
-        'bin_num': 16
+        'bin_num': [16]
     }
 
     keys_to_merge = ['fc_out', 'pool_out', 'out_layer', 'out_dims'] 

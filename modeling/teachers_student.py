@@ -51,6 +51,12 @@ def get_teachers_student(model_cfg, dataset_name, device):
                  "GaitPart": gaitPart,
                  "GaitGL": gaitGL,
                  'Baseline_ResNet9': baseline_ResNet9}
+    
+    # Student setup
+    assert model_cfg["student"] in model_map, "Student must be in %s" % " ".join(model_map.keys)
+    student = model_map[model_cfg["student"]](model_cfg) # eg: GaitSet()
+    student.__name__ = model_cfg["student"]
+    student = student.to(device=torch.device("cuda", device))
 
     # Teachers setup
     teachers = []
@@ -71,7 +77,7 @@ def get_teachers_student(model_cfg, dataset_name, device):
         teacher = teacher.to(device=torch.device("cuda", device))
         teachers[i].__name__ = teacher.__name__
         teachers[i].restore_hint = teacher.restore_hint
-        teachers[i].load_ckpt_strict = teachers[i].load_ckpt_strict
+        teachers[i].load_ckpt_strict = teacher.load_ckpt_strict
 
     # Load parameters in teacher models
     for teacher in teachers:
@@ -80,12 +86,6 @@ def get_teachers_student(model_cfg, dataset_name, device):
     if model_cfg["teacher_eval"]:
         for teacher in teachers:
             teacher.eval()
-
-    # Student setup
-    assert model_cfg["student"] in model_map, "Student must be in %s" % " ".join(model_map.keys)
-    student = model_map[model_cfg["student"]](model_cfg) # eg: GaitSet()
-    student.__name__ = model_cfg["student"]
-    student = student.to(device=torch.device("cuda", device))
     
     return teachers, student
 
