@@ -98,6 +98,11 @@ class GaitPart(nn.Module):
             HorizontalPoolingPyramid(bin_num= self.model_cfg['bin_num']))
         self.TFA = PackSequenceWrapper(TemporalFeatureAggregator(
             in_channels=head_cfg['in_channels'], parts_num=head_cfg['parts_num']))
+        
+        # teacher 
+        self.teacher_conv1 = nn.Conv1d(128, 74, kernel_size=5, padding=2)
+        self.teacher_relu = nn.ReLU()
+        self.teacher_maxpool = nn.MaxPool1d(kernel_size=1, stride=1)
 
 
     # 获取 backbone model
@@ -135,11 +140,18 @@ class GaitPart(nn.Module):
 
         embs = self.Head(out)  # [n, c, p]
 
+        # teacher output
+        between = self.teacher_relu(self.teacher_conv1(embs))
+        between = self.teacher_maxpool(between)
+
         n, _, s, h, w = sils.size()
         retval = {
             'training_feat': {
-                'triplet': {'embeddings': embs, 'labels': labs}
+                'triplet': {'embeddings': embs, 'labels': labs} # embs: torch.Size([16, 128, 16])
             },
+
+            'between_feat': [between], # between: [torch.Size([16, 74, 16])]
+
             'visual_summary': {
                 'image/sils': sils.view(n*s, 1, h, w)
             },

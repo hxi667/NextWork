@@ -67,12 +67,16 @@ class Baseline(nn.Module):
 
         retval = {
             'training_feat': {
-                'triplet': {'embeddings': embed_1, 'labels': labs},
-                'softmax': {'logits': logits, 'labels': labs}
+                'triplet': {'embeddings': embed_1, 'labels': labs}, # embed_1:torch.Size([16, 256, 16]),  labs:torch.Size([16])
+                'softmax': {'logits': logits, 'labels': labs} # logits: torch.Size([16, 74, 16])
             },
+
+            'between_feat': [logits], # between: [torch.Size([16, 74, 16])]
+
             'visual_summary': {
                 'image/sils': rearrange(sils,'n c s h w -> (n s) c h w')
             },
+
             'inference_feat': {
                 'embeddings': embed
             }

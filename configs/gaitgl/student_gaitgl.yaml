@@ -102,17 +102,17 @@ scheduler_cfg:
 
 
 model_cfg:
-  student: GaitGL
+  student: GaitSet
   teachers:
     - name: GaitSet
       restore_hint: 40000
-      load_ckpt_strict: true # If True, check whether the checkpoint is the same as the defined model.
+      load_ckpt_strict: false # If True, check whether the checkpoint is the same as the defined model.
     - name: GaitPart
       restore_hint: 120000
-      load_ckpt_strict: true
+      load_ckpt_strict: false
     - name: GaitGL
       restore_hint: 80000
-      load_ckpt_strict: true
+      load_ckpt_strict: false
     - name: Baseline_ResNet9
       restore_hint: 60000
       load_ckpt_strict: true

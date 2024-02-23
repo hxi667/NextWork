@@ -51,6 +51,13 @@ class GaitSet(nn.Module):
 
         self.HPP = HorizontalPoolingPyramid(bin_num=self.model_cfg['bin_num'])
 
+        # teacher
+        self.teacher_conv1 = nn.Conv1d(256, 128, kernel_size=3, padding=1)
+        self.teacher_conv2 = nn.Conv1d(128, 64, kernel_size=2, padding=1)
+        self.teacher_relu = nn.ReLU()
+        self.teacher_maxpool = nn.MaxPool1d(kernel_size=2, stride=2)
+        self.teacher_fc = nn.Linear(64*16, 74*16)
+
     def forward(self, inputs):
         ipts, labs, _, _, seqL = inputs
         sils = ipts[0]  # [n, s, h, w]
@@ -76,14 +83,27 @@ class GaitSet(nn.Module):
         feature = torch.cat([feature1, feature2], -1)  # [n, c, p]
         embs = self.Head(feature)
 
+        # teacher output
+        between = self.teacher_relu(self.teacher_conv1(embs))
+        between = self.teacher_maxpool(between)
+        between = self.teacher_relu(self.teacher_conv2(between))
+        between = self.teacher_maxpool(between)
+        between = self.teacher_fc(between.view(between.size(0), -1))
+        between = between.view(between.size(0), 74, 16)
+
+        
         n, _, s, h, w = sils.size()
         retval = {
             'training_feat': {
-                'triplet': {'embeddings': embs, 'labels': labs}
+                'triplet': {'embeddings': embs, 'labels': labs} # embs: torch.Size([16, 256, 62])
             },
+            
+            'between_feat': [between], # between: [torch.Size([16, 74, 16])]
+            
             'visual_summary': {
                 'image/sils': sils.view(n*s, 1, h, w)
             },
+
             'inference_feat': {
                 'embeddings': embs
             }

@@ -84,7 +84,7 @@ class BuildModel():
 
         self.update_parameters = [{'params': self.student.parameters()}]
 
-        # discriminator
+        # get discriminator
         if cfgs['model_cfg']['discriminator']['adv']:
             self.discriminators = Discriminators(dims, grl=cfgs['model_cfg']['discriminator']['grl'])
             for d in self.discriminators.discriminators:
@@ -414,19 +414,19 @@ class BuildModel():
             with autocast(enabled=model.engine_cfg['enable_float16']):
                 # run model
                 student_retval = model.student(ipts)
-                student_training_feat, visual_summary = student_retval['training_feat'], student_retval['visual_summary']
+                student_training_feat, visual_summary, student_between_feat= student_retval['training_feat'], student_retval['visual_summary'], student_retval['between_feat']
                 del student_retval
                 
                 # Get teacher model
                 teacher = selector_teacher(model.teachers)
                 # Get output from teacher model
                 teacher_retval = teacher(ipts)
-                teacher_training_feat = teacher_retval['training_feat']
+                teacher_between_feat = teacher_retval['between_feat']
                 del teacher_retval
                 # TODO
                 # Select output from student and teacher
-                student_embedding, teacher_embedding = selector_output(student_training_feat["triplet"]["embeddings"],
-                                                                        teacher_training_feat["triplet"]["embeddings"],
+                student_embedding, teacher_embedding = selector_output(student_between_feat,
+                                                                        teacher_between_feat,
                                                                         model.cfgs['model_cfg']['out_layer'])
             
             # Calculate student loss

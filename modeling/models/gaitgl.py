@@ -152,6 +152,9 @@ class GaitGL(nn.Module):
             self.Head1 = SeparateFCs(64, in_c[-1], class_num)
             self.Bn_head = True
 
+        # teacher
+        self.teacher_linear = nn.Linear(64, 16) ###
+
     def forward(self, inputs, training=True):
         ipts, labs, _, _, seqL = inputs
         seqL = None if not training else seqL
@@ -188,15 +191,22 @@ class GaitGL(nn.Module):
             bnft, logi = self.BNNecks(gait)  # [n, c, p]
             embed = gait
 
+        # teacher output
+        between = self.teacher_linear(logi)
+
         n, _, s, h, w = sils.size()
         retval = {
             'training_feat': {
-                'triplet': {'embeddings': embed, 'labels': labs},
-                'softmax': {'logits': logi, 'labels': labs}
+                'triplet': {'embeddings': embed, 'labels': labs}, # embed: torch.Size([16, 128, 64])
+                'softmax': {'logits': logi, 'labels': labs} # logi: torch.Size([16, 74, 64])
             },
+
+            'between_feat': [between], # between: [torch.Size([16, 74, 16])]
+            
             'visual_summary': {
                 'image/sils': sils.view(n*s, 1, h, w)
             },
+
             'inference_feat': {
                 'embeddings': embed
             }

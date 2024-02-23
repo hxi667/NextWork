@@ -88,6 +88,8 @@ if __name__ == '__main__':
         raise ValueError("Expect number of available GPUs({}) equals to the world size({}).".format(
             torch.cuda.device_count(), torch.distributed.get_world_size()))
     
+    # torch.backends.cudnn.enabled = False
+    
     # Load Config File
     with open(args.cfgs, 'r') as stream:
         cfgs = yaml.safe_load(stream)
