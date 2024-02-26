@@ -104,6 +104,12 @@ class GaitPart(nn.Module):
         self.teacher_relu = nn.ReLU()
         self.teacher_maxpool = nn.MaxPool1d(kernel_size=1, stride=1)
 
+        # add_feature' parameters 
+        self.pool_out = self.model_cfg['pool_out'] # or avg
+        self.fc_out = self.model_cfg['fc_out']
+        self.out_dims = self.model_cfg['out_dims'][-5:]
+        if self.fc_out:
+            self.fc_layers = self._make_fc()
 
     # 获取 backbone model
     def get_backbone(self, backbone_cfg):
@@ -125,8 +131,31 @@ class GaitPart(nn.Module):
         raise ValueError(
             "Error type for -Backbone-Cfg-, supported: (A list of) dict.")
 
+    def _make_fc(self):
+        if self.pool_out == "avg":
+            layers = [
+                nn.AdaptiveAvgPool1d(output) for output in self.out_dims
+            ]
+        elif self.pool_out == "max":
+            layers = [
+                nn.AdaptiveMaxPool1d(output) for output in self.out_dims
+            ]
+        return nn.Sequential(*layers)
+
+    def _add_feature(self, x, feature_maps, fc_layer):
+        if self.fc_out:
+            out = self.fc_layers[fc_layer](x.view(x.size(0), x.size(1), -1))
+            if self.pool_out == "max":
+                out, _ = out.max(dim=1)
+            else:
+                out = out.mean(dim=1)
+            feature_maps.append(torch.squeeze(out))
+        else:
+            feature_maps.append(x.view(x.size(0), -1))
 
     def forward(self, inputs):
+        feature_maps = []
+
         ipts, labs, _, _, seqL = inputs
 
         sils = ipts[0]
@@ -136,14 +165,21 @@ class GaitPart(nn.Module):
         del ipts
         # sils: torch.Size([batch, 1, 30, 64, 44])
         out = self.Backbone(sils)  # [n, c, s, h, w] # out: torch.Size([batch, 128, 30, 16, 11])
-        out = self.HPP(out)  # [n, c, s, p] # out: torch.Size([batch, 128, 30, 16])
-        out = self.TFA(out, seqL)  # [n, c, p] # out: torch.Size([batch, 128, 16])
+        self._add_feature(out, feature_maps, 0)     
 
+        out = self.HPP(out)  # [n, c, s, p] # out: torch.Size([batch, 128, 30, 16])
+        self._add_feature(out, feature_maps, 1)     
+
+        out = self.TFA(out, seqL)  # [n, c, p] # out: torch.Size([batch, 128, 16])
+        self._add_feature(out, feature_maps, 2)
+ 
         embs = self.Head(out)  # [n, c, p] # out: torch.Size([batch, 128, 16])
+        self._add_feature(embs, feature_maps, 3)
 
         # teacher output
         between = self.teacher_relu(self.teacher_conv1(embs))
         between = self.teacher_maxpool(between) # between: [torch.Size([batch, 74, 16])]
+        self._add_feature(between, feature_maps, 4)
 
         n, _, s, h, w = sils.size()
         retval = {
@@ -151,7 +187,7 @@ class GaitPart(nn.Module):
                 'triplet': {'embeddings': embs, 'labels': labs} # embs: torch.Size([batch, 128, 16])
             },
 
-            'between_feat': [between], # between: [torch.Size([batch, 74, 16])]
+            'between_feat': feature_maps, # between: [torch.Size([batch, 74, 16])]
 
             'visual_summary': {
                 'image/sils': sils.view(n*s, 1, h, w)

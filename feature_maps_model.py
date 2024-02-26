@@ -43,21 +43,25 @@ class ResNet(nn.Module):
     def forward(self, x):
         feature_maps = []
 
-        x1 = torch.randn(3, 64, 32, 32) 
+        # x1 = torch.randn(3, 64, 32, 32)
+        x1 = torch.randn(3, 128, 10, 64,22)
         self._add_feature(x1, feature_maps, 0) 
         
-        x2 = torch.randn(3, 128, 16, 16) 
+        # x2 = torch.randn(3, 128, 16, 16)
+        x2 = torch.randn(3, 128, 10, 64,22) 
         self._add_feature(x2, feature_maps, 1) 
 
-        x3 = torch.randn(3, 256, 8, 8) 
+        # x3 = torch.randn(3, 256, 8, 8)
+        x3 = torch.randn(3, 256, 8, 8)
         self._add_feature(x3, feature_maps, 2) 
 
-        x4 = torch.randn(3, 512, 4, 4) 
+        # x4 = torch.randn(3, 512, 4, 4)
+        x4 = torch.randn(3, 512, 4, 4)  
         self._add_feature(x4, feature_maps, 3) 
 
         out = F.avg_pool2d(x4, 4)
         out = out.view(out.size(0), -1)
-        out = self.linear(out) # torch.Size([43, 10])
+        out = self.linear(out) # torch.Size([3, 10])
 
         feature_maps.append(out.view(out.size(0), -1))
 

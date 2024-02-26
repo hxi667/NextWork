@@ -102,7 +102,7 @@ scheduler_cfg:
 
 
 model_cfg:
-  student: Baseline_ResNet9
+  student: GaitGL
   teachers:
     - name: GaitSet
       restore_hint: 40000

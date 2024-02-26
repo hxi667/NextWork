@@ -152,10 +152,41 @@ class GaitGL(nn.Module):
             self.Head1 = SeparateFCs(64, in_c[-1], class_num)
             self.Bn_head = True
 
-        # teacher
-        self.teacher_linear = nn.Linear(64, 16) ###
+        # # teacher
+        # self.teacher_linear = nn.Linear(64, 16) ###
+            
+        # add_feature' parameters 
+        self.pool_out = self.model_cfg['pool_out'] # or avg
+        self.fc_out = self.model_cfg['fc_out']
+        self.out_dims = self.model_cfg['out_dims'][-5:]
+        if self.fc_out:
+            self.fc_layers = self._make_fc()
+
+    def _make_fc(self):
+        if self.pool_out == "avg":
+            layers = [
+                nn.AdaptiveAvgPool1d(output) for output in self.out_dims
+            ]
+        elif self.pool_out == "max":
+            layers = [
+                nn.AdaptiveMaxPool1d(output) for output in self.out_dims
+            ]
+        return nn.Sequential(*layers)
+
+    def _add_feature(self, x, feature_maps, fc_layer):
+        if self.fc_out:
+            out = self.fc_layers[fc_layer](x.view(x.size(0), x.size(1), -1))
+            if self.pool_out == "max":
+                out, _ = out.max(dim=1)
+            else:
+                out = out.mean(dim=1)
+            feature_maps.append(torch.squeeze(out))
+        else:
+            feature_maps.append(x.view(x.size(0), -1))
 
     def forward(self, inputs, training=True):
+        feature_maps = []
+
         ipts, labs, _, _, seqL = inputs
         seqL = None if not training else seqL
         if not training and len(labs) != 1:
@@ -172,15 +203,19 @@ class GaitGL(nn.Module):
         # sils: torch.Size([batch, 1, 30, 64, 44])
         outs = self.conv3d(sils) # outs：torch.Size([batch, 32, 30, 64, 44])
         outs = self.LTA(outs) # outs：torch.Size([batch, 32, 10, 64, 44])
+        self._add_feature(outs, feature_maps, 0)
 
         outs = self.GLConvA0(outs) # outs：torch.Size([batch, 64, 10, 64, 44])
         outs = self.MaxPool0(outs) # outs：torch.Size([batch, 64, 10, 32, 22])
+        self._add_feature(outs, feature_maps, 1)
 
         outs = self.GLConvA1(outs) # outs：torch.Size([batch, 128, 10, 32, 22])
         outs = self.GLConvB2(outs)  # [n, c, s, h, w] # outs：torch.Size([batch, 128, 10, 64, 22])
+        self._add_feature(outs, feature_maps, 2)
 
         outs = self.TP(outs, seqL=seqL, options={"dim": 2})[0]  # [n, c, h, w] # outs：torch.Size([batch, 128, 64, 22])
         outs = self.HPP(outs)  # [n, c, p] # outs：torch.Size([batch, 128, 64])
+        self._add_feature(outs, feature_maps, 3)
 
         gait = self.Head0(outs)  # [n, c, p] # gait.Size([batch, 128, 64])
 
@@ -188,12 +223,14 @@ class GaitGL(nn.Module):
             bnft = self.Bn(gait)  # [n, c, p] # bnft：torch.Size([batch, 128, 64])
             logi = self.Head1(bnft)  # [n, c, p] # logi: torch.Size([batch, 74, 64])
             embed = bnft
+            self._add_feature(embed, feature_maps, 4)
+        
         else:  # BNNechk as Head
             bnft, logi = self.BNNecks(gait)  # [n, c, p] 
             embed = gait 
 
-        # teacher output
-        between = self.teacher_linear(logi) # torch.Size([batch, 74, 16])
+        # # teacher output
+        # between = self.teacher_linear(logi) # torch.Size([batch, 74, 16])
 
         n, _, s, h, w = sils.size()
         retval = {
@@ -202,7 +239,7 @@ class GaitGL(nn.Module):
                 'softmax': {'logits': logi, 'labels': labs} # logi: torch.Size([batch, 74, 64])
             },
 
-            'between_feat': [between], # between: [torch.Size([batch, 74, 16])]
+            'between_feat': feature_maps, # between: [torch.Size([batch, 74, 16])]
             
             'visual_summary': {
                 'image/sils': sils.view(n*s, 1, h, w)
