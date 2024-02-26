@@ -134,23 +134,24 @@ class GaitPart(nn.Module):
             sils = sils.unsqueeze(1)
 
         del ipts
-        out = self.Backbone(sils)  # [n, c, s, h, w]
-        out = self.HPP(out)  # [n, c, s, p]
-        out = self.TFA(out, seqL)  # [n, c, p]
+        # sils: torch.Size([batch, 1, 30, 64, 44])
+        out = self.Backbone(sils)  # [n, c, s, h, w] # out: torch.Size([batch, 128, 30, 16, 11])
+        out = self.HPP(out)  # [n, c, s, p] # out: torch.Size([batch, 128, 30, 16])
+        out = self.TFA(out, seqL)  # [n, c, p] # out: torch.Size([batch, 128, 16])
 
-        embs = self.Head(out)  # [n, c, p]
+        embs = self.Head(out)  # [n, c, p] # out: torch.Size([batch, 128, 16])
 
         # teacher output
         between = self.teacher_relu(self.teacher_conv1(embs))
-        between = self.teacher_maxpool(between)
+        between = self.teacher_maxpool(between) # between: [torch.Size([batch, 74, 16])]
 
         n, _, s, h, w = sils.size()
         retval = {
             'training_feat': {
-                'triplet': {'embeddings': embs, 'labels': labs} # embs: torch.Size([16, 128, 16])
+                'triplet': {'embeddings': embs, 'labels': labs} # embs: torch.Size([batch, 128, 16])
             },
 
-            'between_feat': [between], # between: [torch.Size([16, 74, 16])]
+            'between_feat': [between], # between: [torch.Size([batch, 74, 16])]
 
             'visual_summary': {
                 'image/sils': sils.view(n*s, 1, h, w)

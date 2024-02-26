@@ -169,39 +169,40 @@ class GaitGL(nn.Module):
             repeat = 3 if s == 1 else 2
             sils = sils.repeat(1, 1, repeat, 1, 1)
 
-        outs = self.conv3d(sils)
-        outs = self.LTA(outs)
+        # sils: torch.Size([batch, 1, 30, 64, 44])
+        outs = self.conv3d(sils) # outs：torch.Size([batch, 32, 30, 64, 44])
+        outs = self.LTA(outs) # outs：torch.Size([batch, 32, 10, 64, 44])
 
-        outs = self.GLConvA0(outs)
-        outs = self.MaxPool0(outs)
+        outs = self.GLConvA0(outs) # outs：torch.Size([batch, 64, 10, 64, 44])
+        outs = self.MaxPool0(outs) # outs：torch.Size([batch, 64, 10, 32, 22])
 
-        outs = self.GLConvA1(outs)
-        outs = self.GLConvB2(outs)  # [n, c, s, h, w]
+        outs = self.GLConvA1(outs) # outs：torch.Size([batch, 128, 10, 32, 22])
+        outs = self.GLConvB2(outs)  # [n, c, s, h, w] # outs：torch.Size([batch, 128, 10, 64, 22])
 
-        outs = self.TP(outs, seqL=seqL, options={"dim": 2})[0]  # [n, c, h, w]
-        outs = self.HPP(outs)  # [n, c, p]
+        outs = self.TP(outs, seqL=seqL, options={"dim": 2})[0]  # [n, c, h, w] # outs：torch.Size([batch, 128, 64, 22])
+        outs = self.HPP(outs)  # [n, c, p] # outs：torch.Size([batch, 128, 64])
 
-        gait = self.Head0(outs)  # [n, c, p]
+        gait = self.Head0(outs)  # [n, c, p] # gait.Size([batch, 128, 64])
 
         if self.Bn_head:  # Original GaitGL Head
-            bnft = self.Bn(gait)  # [n, c, p]
-            logi = self.Head1(bnft)  # [n, c, p]
+            bnft = self.Bn(gait)  # [n, c, p] # bnft：torch.Size([batch, 128, 64])
+            logi = self.Head1(bnft)  # [n, c, p] # logi: torch.Size([batch, 74, 64])
             embed = bnft
         else:  # BNNechk as Head
-            bnft, logi = self.BNNecks(gait)  # [n, c, p]
-            embed = gait
+            bnft, logi = self.BNNecks(gait)  # [n, c, p] 
+            embed = gait 
 
         # teacher output
-        between = self.teacher_linear(logi)
+        between = self.teacher_linear(logi) # torch.Size([batch, 74, 16])
 
         n, _, s, h, w = sils.size()
         retval = {
             'training_feat': {
-                'triplet': {'embeddings': embed, 'labels': labs}, # embed: torch.Size([16, 128, 64])
-                'softmax': {'logits': logi, 'labels': labs} # logi: torch.Size([16, 74, 64])
+                'triplet': {'embeddings': embed, 'labels': labs}, # embed: torch.Size([batch, 128, 64])
+                'softmax': {'logits': logi, 'labels': labs} # logi: torch.Size([batch, 74, 64])
             },
 
-            'between_feat': [between], # between: [torch.Size([16, 74, 16])]
+            'between_feat': [between], # between: [torch.Size([batch, 74, 16])]
             
             'visual_summary': {
                 'image/sils': sils.view(n*s, 1, h, w)

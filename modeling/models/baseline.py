@@ -54,24 +54,25 @@ class Baseline(nn.Module):
             sils = rearrange(sils, 'n s c h w -> n c s h w')
 
         del ipts
-        outs = self.Backbone(sils)  # [n, c, s, h, w]
+        # sils: torch.Size([batch, 1, 30, 64, 44])
+        outs = self.Backbone(sils)  # [n, c, s, h, w] # outs: torch.Size([batch, 512, 30, 16, 11])
 
         # Temporal Pooling, TP
-        outs = self.TP(outs, seqL, options={"dim": 2})[0]  # [n, c, h, w]
+        outs = self.TP(outs, seqL, options={"dim": 2})[0]  # [n, c, h, w] # outs: torch.Size([batch, 512, 16, 11])
         # Horizontal Pooling Matching, HPM
-        feat = self.HPP(outs)  # [n, c, p]
+        feat = self.HPP(outs)  # [n, c, p] # feat: torch.Size([batch, 512, 16])
 
-        embed_1 = self.FCs(feat)  # [n, c, p]
-        embed_2, logits = self.BNNecks(embed_1)  # [n, c, p]
-        embed = embed_1
+        embed_1 = self.FCs(feat)  # [n, c, p] # embed_1: torch.Size([batch, 256, 16])
+        embed_2, logits = self.BNNecks(embed_1)  # [n, c, p] # embed_2: torch.Size([batch, 256, 16]), logits: torch.Size([batch, 74, 16])
+        embed = embed_1 # embed:
 
         retval = {
             'training_feat': {
-                'triplet': {'embeddings': embed_1, 'labels': labs}, # embed_1:torch.Size([16, 256, 16]),  labs:torch.Size([16])
-                'softmax': {'logits': logits, 'labels': labs} # logits: torch.Size([16, 74, 16])
+                'triplet': {'embeddings': embed_1, 'labels': labs}, # embed_1:torch.Size([batch, 256, 16]),  labs:torch.Size([batch])
+                'softmax': {'logits': logits, 'labels': labs} # logits: torch.Size([batch, 74, 16])
             },
 
-            'between_feat': [logits], # between: [torch.Size([16, 74, 16])]
+            'between_feat': [logits], # between: [torch.Size([batch, 74, 16])]
 
             'visual_summary': {
                 'image/sils': rearrange(sils,'n c s h w -> (n s) c h w')

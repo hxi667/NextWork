@@ -65,23 +65,24 @@ class GaitSet(nn.Module):
             sils = sils.unsqueeze(1)
 
         del ipts
-        outs = self.set_block1(sils)
-        gl = self.set_pooling(outs, seqL, options={"dim": 2})[0]
-        gl = self.gl_block2(gl)
+        # sils: torch.Size([batch, 1, 30, 64, 44])
+        outs = self.set_block1(sils) # outs: torch.Size([batch, 32, 30, 32, 22])
+        gl = self.set_pooling(outs, seqL, options={"dim": 2})[0] # gl: torch.Size([batch, 32, 32, 22])
+        gl = self.gl_block2(gl) # gl: torch.Size([batch, 64, 16, 11])
 
-        outs = self.set_block2(outs)
-        gl = gl + self.set_pooling(outs, seqL, options={"dim": 2})[0]
-        gl = self.gl_block3(gl)
+        outs = self.set_block2(outs) # outs: torch.Size([batch, 64, 30, 16, 11])
+        gl = gl + self.set_pooling(outs, seqL, options={"dim": 2})[0] # gl: torch.Size([batch, 64, 16, 11])
+        gl = self.gl_block3(gl) # gl: torch.Size([batch, 128, 16, 11])
 
-        outs = self.set_block3(outs)
-        outs = self.set_pooling(outs, seqL, options={"dim": 2})[0]
-        gl = gl + outs
+        outs = self.set_block3(outs) # outs: torch.Size([batch, 128, 30, 16, 11])
+        outs = self.set_pooling(outs, seqL, options={"dim": 2})[0] # outs: torch.Size([batch, 128, 16, 11])
+        gl = gl + outs # gl: torch.Size([batch, 128, 16, 11])
 
         # Horizontal Pooling Matching, HPM
-        feature1 = self.HPP(outs)  # [n, c, p]
-        feature2 = self.HPP(gl)  # [n, c, p]
-        feature = torch.cat([feature1, feature2], -1)  # [n, c, p]
-        embs = self.Head(feature)
+        feature1 = self.HPP(outs)  # [n, c, p] # feature1: torch.Size([batch, 128, 31])
+        feature2 = self.HPP(gl)  # [n, c, p] # feayire2: torch.Size([batch, 128, 31])
+        feature = torch.cat([feature1, feature2], -1)  # [n, c, p] # feature: torch.Size([batch, 128, 62])
+        embs = self.Head(feature) # embs: torch.Size([batch, 256, 62])
 
         # teacher output
         between = self.teacher_relu(self.teacher_conv1(embs))
@@ -95,10 +96,10 @@ class GaitSet(nn.Module):
         n, _, s, h, w = sils.size()
         retval = {
             'training_feat': {
-                'triplet': {'embeddings': embs, 'labels': labs} # embs: torch.Size([16, 256, 62])
+                'triplet': {'embeddings': embs, 'labels': labs} # embs: torch.Size([batch, 256, 62])
             },
             
-            'between_feat': [between], # between: [torch.Size([16, 74, 16])]
+            'between_feat': [between], # between: [torch.Size([batch, 74, 16])]
             
             'visual_summary': {
                 'image/sils': sils.view(n*s, 1, h, w)
