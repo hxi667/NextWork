@@ -146,7 +146,7 @@ def baseline_ResNet9(model_cfg):
         'bin_num': [16]
     }
 
-    keys_to_merge = ['fc_out', 'pool_out', 'out_layer', 'out_dims'] 
+    keys_to_merge = ['fc_out', 'pool_out', 'out_dims'] 
 
     merged_dict = {key: model_cfg[key] for key in keys_to_merge if key in model_cfg}
     merged_dict.update(baseline_ResNet9_cfg)  

@@ -124,7 +124,12 @@ model_cfg:
   fc_out: true # if immediate output from fc-layer
   pool_out: max  # the type of pooling layer of output, max or avg
   out_layer:
-    - -1
+    # - -1
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
   out_dims: # the dims of output pooling layers
     - 5000
     - 1000
