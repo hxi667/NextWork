@@ -460,10 +460,15 @@ class BuildModel():
                 if model.engine_cfg['with_test']:
                     model.msg_mgr.log_info("Running test...")
                     model.student.eval()
-                    result_dict = BuildModel.run_test()
+                    result_dict = BuildModel.run_test(model)
                     model.student.train()
                     if model.cfgs['trainer_cfg']['fix_BN']:
-                        model.fix_BN()
+                        model.fix_BN(model.student)
+                        for teacher in model.teachers:
+                            model.fix_BN(teacher)
+                        for discriminator in model.discriminators.discriminators:
+                            model.fix_BN(discriminator)
+                        
                     if result_dict:
                         model.msg_mgr.write_to_tensorboard(result_dict)
                     model.msg_mgr.reset_time()

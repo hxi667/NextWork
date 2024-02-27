@@ -51,7 +51,6 @@ evaluator_cfg:
   cross_view_gallery: false
 
 
-
 loss_cfg:
   - loss_term_weight: 1.0
     margin: 0.2
