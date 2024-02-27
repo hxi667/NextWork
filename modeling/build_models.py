@@ -120,7 +120,7 @@ class BuildModel():
 
             # for Discriminator
             if cfgs['model_cfg']['discriminator']['adv']:
-                self.discriminators_criterion = discriminatorLoss(self.discriminators, cfgs['loss_map']['eta'])
+                self.discriminators_criterion = discriminatorLoss(self.discriminators, cfgs['loss_map']['eta'], enable_float16=self.engine_cfg['enable_float16'])
             else:
                 self.discriminators_criterion = discriminatorFakeLoss() # FakeLoss
             
