@@ -443,10 +443,9 @@ class BuildModel():
                 # 跳出当前循环
                 continue
             
-            loss_info = Odict()
-            loss_info.append(student_loss_info)
-            loss_info.append({'scalar/between/loss': between_loss,
-                              'scalar/discriminators/loss':d_loss})
+            loss_info = student_loss_info
+            loss_info['scalar/between/loss']= between_loss
+            loss_info['scalar/discriminators/loss']= d_loss
             
             visual_summary.update(loss_info) # 更新 "loss_info" to "visual_summary" dict
             visual_summary['scalar/learning_rate'] = model.optimizer.param_groups[0]['lr']
