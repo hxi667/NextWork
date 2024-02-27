@@ -38,11 +38,11 @@ trainer_cfg:
 evaluator_cfg:
   enable_float16: false
   restore_ckpt_strict: true
-  restore_hint: 80000
+  restore_hint: 10000
   save_name: GaitGL
   eval_func: evaluate_indoor_dataset
   sampler:
-    batch_size: 8 # the batch_size should be equal to the gpus number at the test phase!!!
+    batch_size: 4 # the batch_size should be equal to the gpus number at the test phase!!!
     sample_type: all_ordered
     type: InferenceSampler
   transform:
@@ -123,12 +123,12 @@ model_cfg:
   fc_out: true # if immediate output from fc-layer
   pool_out: max  # the type of pooling layer of output, max or avg
   out_layer:
-    # - -1
-    - 0
-    - 1
-    - 2
-    - 3
-    - 4
+    - -1
+    # - 0
+    # - 1
+    # - 2
+    # - 3
+    # - 4
   out_dims: # the dims of output pooling layers
     - 5000
     - 1000
