@@ -1,6 +1,6 @@
 import torch
 
-from modeling.models import gaitGL, gaitSet, gaitPart, baseline_ResNet9
+from modeling.models import gaitGL_CASIAB, gaitSet, gaitPart, baseline_ResNet9
 import numpy as np
 
 from utils.msg_manager import get_msg_mgr
@@ -14,17 +14,17 @@ def load_teachers_ckpt(device, model, save_name):
     checkpoint = torch.load(save_name, map_location=torch.device("cuda", device))
     model_state_dict = checkpoint['model'] # checkpoint['optimizer'], checkpoint['scheduler']
 
-    # 如果 not load_ckpt_strict 为 True，即不是严格检查checkpoint是否与定义的模型相同，
-    # 则找到两个模型状态字典中共有的参数键，并将它们按照某个规则排序后打印输出
+    # if not load_ckpt_strict is True, not strictly checking that the checkpoint is the same as the module of the defined model,
+    # Find the keys that are common to both model state dictionaries and print them out after ordering them 
     if not model.load_ckpt_strict:
         msg_mgr.log_info("-------- Restored Params List --------")
         msg_mgr.log_info(sorted(set(model_state_dict.keys()).intersection(
             set(model.state_dict().keys()))))
     
-    # 参数strict默认是True，这时候就需要严格按照模型中参数的Key值来加载参数，如果增删了模型的结构层，或者改变了原始层中的参数，加载就会报错
-    # 参数strict如果为Flase，就可以只加载具有相同名称的参数层，对于修改的模型结构层进行随机赋值。
-    # 这里需要注意的是，如果只是改变了原来层的参数，但是没有换名称，依然还是会报错。因为根据key值找到对应的层之后，进行赋值，发现参数不匹配。
-    # 这时候可以将原来的层换个名称，再加载就不会报错了。最后，大家需要注意的是，strict=Flase要谨慎使用，因为很有可能你会一点参数也没加载进来
+    # The parameter "strict" is True by default, then you need to load the parameter strictly according to the Key value of the parameter in the model, if you add or delete the layer of the model, or change the parameter in the original layer, the loading will report an error.
+    # If the parameter "strict" is Flase, only the parameter of the layer with the same name is allowed to be loaded, and the randomly value is be loaded to the modified layer.
+    # It is important to note that if you just change the parameters of the original layer, but not the name, you will still get an error. This is because after finding the corresponding layer based on the key value and assigning it, the parameters are found to be mismatched.
+    # At this point you can change the name of the original layer and load it again without reporting an error. Finally, you should note that "strict"=Flase should be used with caution, because it is very likely that you will not load in any parameters at all!
     model.load_state_dict(model_state_dict, strict=model.load_ckpt_strict)
     
     msg_mgr.log_info("Restore Parameters from %s !!!" % save_name)
@@ -49,12 +49,12 @@ def get_teachers_student(model_cfg, dataset_name, device):
 
     model_map = {"GaitSet": gaitSet,
                  "GaitPart": gaitPart,
-                 "GaitGL": gaitGL,
+                 "GaitGL_CASIAB": gaitGL_CASIAB,
                  'Baseline_ResNet9': baseline_ResNet9}
     
     # Student setup
     assert model_cfg["student"] in model_map, "Student must be in %s" % " ".join(model_map.keys)
-    student = model_map[model_cfg["student"]](model_cfg) # eg: GaitSet()
+    student = model_map[model_cfg["student"]](model_cfg) # eg: GaitSet(model_cfg)
     student.__name__ = model_cfg["student"]
     student = student.to(device=torch.device("cuda", device))
 
@@ -63,7 +63,7 @@ def get_teachers_student(model_cfg, dataset_name, device):
     # Add teachers models into teacher model list
     for t in model_cfg["teachers"]:
         if t['name'] in model_map:
-            net = model_map[t['name']](model_cfg)  # eg: GaitSet()
+            net = model_map[t['name']](model_cfg)  # eg: GaitSet(model_cfg)
             net.__name__ = t['name']
             net.restore_hint = t['restore_hint']
             net.load_ckpt_strict = t['load_ckpt_strict']

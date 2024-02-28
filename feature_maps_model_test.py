@@ -76,3 +76,15 @@ print("feature_maps[1].shape: ", feature_maps[1].shape)
 print("feature_maps[2].shape: ", feature_maps[2].shape)
 print("feature_maps[3].shape: ", feature_maps[3].shape)
 print("feature_maps[4].shape: ", feature_maps[4].shape)
+
+
+
+x = torch.randn(3,4,3)
+y = x[:,:,None,None]
+# print(x)
+print(x.shape)
+# print(y)
+print(y.shape)
+
+list = [1,2,3,4,5,6,7,8,9,10]
+print(sum(list)/len(list))

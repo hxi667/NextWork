@@ -18,7 +18,7 @@ class DataSet(tordata.Dataset):
                                     seq_info -> ['001', 'bg-01', '000', ['./001/bg-01/000/000-rgbs.pkl', './001/bg-01/000/000-sils.pkl', ...]]
         """
 
-        # 获取 self.seqs_info 变量 -> [['001', 'bg-01', '000', ['data_path/001/bg-01/000/000-rgbs.pkl', 'data_path/001/bg-01/000/000-sils.pkl', ...]], ...] 
+        # get self.seqs_info variable -> [['001', 'bg-01', '000', ['data_path/001/bg-01/000/000-rgbs.pkl', 'data_path/001/bg-01/000/000-sils.pkl', ...]], ...] 
         self.__dataset_parser(data_cfg, training) 
         self.cache = data_cfg['cache']
         
@@ -26,19 +26,19 @@ class DataSet(tordata.Dataset):
         self.types_list = [seq_info[1] for seq_info in self.seqs_info]
         self.views_list = [seq_info[2] for seq_info in self.seqs_info]
 
-        self.label_set = sorted(list(set(self.label_list))) # 排过序的，label 唯一的，list
+        self.label_set = sorted(list(set(self.label_list))) # the list was sorted and labels unique.
         self.types_set = sorted(list(set(self.types_list)))
         self.views_set = sorted(list(set(self.views_list)))
         
-        # 保存 seqs 数据
+        # save seqs data
         self.seqs_data = [None] * len(self) 
         self.indices_dict = {label: [] for label in self.label_set}
         
         # self.indices_dict -> {'001': [0, 1, 2, ... , 107, 108, 109], '002': [110, 111, 112, ... , 217, 218, 219], ...} 
         for i, seq_info in enumerate(self.seqs_info):
-            self.indices_dict[seq_info[0]].append(i) # 例: seq_info[0] -> "001"， self.indices_dict 的 key
+            self.indices_dict[seq_info[0]].append(i) # eg: seq_info[0] -> "001", the key of self.indices_dict
         
-        # 如果为 true, 加载所有的数据到内存
+        # if true, load all data to memory
         if self.cache:
             self.__load_all_data()
 
@@ -69,29 +69,29 @@ class DataSet(tordata.Dataset):
         return data_list
 
     def __getitem__(self, idx):
-        # 如果 self.cache 为 false，在训练的时候再加载数据，按 idx 索引返回对应的 data_list 和 seq_info
+        # if self.cache is false, when training, load data and return the data_list and seq_info by idx index.
         if not self.cache:
             data_list = self.__loader__(self.seqs_info[idx][-1])
-        # 如果 self.cache 为 true，在训练前将所有数据加载进内存，并将数据data和数据info保存在内存变量 self.seqs_data 和 self.seqs_info 中
+        # if self.cache is true，load all data before training, and save data and info in the memory variables self.seqs_data and self.seqs_info
         elif self.seqs_data[idx] is None:
             data_list = self.__loader__(self.seqs_info[idx][-1])
             self.seqs_data[idx] = data_list
         else:
             data_list = self.seqs_data[idx]
         seq_info = self.seqs_info[idx]
-        # 例: data_list.shape -> [(133, 3, 128, 128), (133, 128, 128), ...]
-        # 例: seq_info -> ['001', 'bg-01', '000', ['./001/bg-01/000/000-rgbs.pkl', './001/bg-01/000/000-sils.pkl', ...]]
+        # eg: data_list.shape -> [(133, 3, 128, 128), (133, 128, 128), ...]
+        # eg: seq_info -> ['001', 'bg-01', '000', ['./001/bg-01/000/000-rgbs.pkl', './001/bg-01/000/000-sils.pkl', ...]]
         return data_list, seq_info
 
     def __load_all_data(self):  
         for idx in range(len(self)):
             self.__getitem__(idx)
 
-    # 获取 "self.seqs_info" 变量, 返回一个 list -> [['001', 'bg-01', '000', ['./001/bg-01/000/000-rgbs.pkl', './001/bg-01/000/000-sils.pkl', ...]], ...] 
+    # get "self.seqs_info" 变量, return a list -> [['001', 'bg-01', '000', ['./001/bg-01/000/000-rgbs.pkl', './001/bg-01/000/000-sils.pkl', ...]], ...] 
     def __dataset_parser(self, data_config, training):
         dataset_root = data_config['dataset_root']
         try:
-            data_in_use = data_config['data_in_use']  #  True 或 False。 多数据类型时 [True | False, True | False, ..., True | False], 例如：[True, False, False, False]
+            data_in_use = data_config['data_in_use']  #  True or Fals. For multiple data types: [True | False, True | False, ..., True | False], eg：[True, False, False, False]
         except:
             data_in_use = None
 
@@ -100,14 +100,14 @@ class DataSet(tordata.Dataset):
         train_set = partition["TRAIN_SET"]
         test_set = partition["TEST_SET"]
         label_list = os.listdir(dataset_root)
-        # 遍历 "train_set" 变量， 获取当前的元素 "label", 如果 "label" 在 "label_list" 中, 则将 "label" 保存在新的 list 中
+        # Iterate "train_set" variable, get the current element "label", if "label" is in "label_list", then save "label" in the new list.
         train_set = [label for label in train_set if label in label_list]
         test_set = [label for label in test_set if label in label_list]
         miss_pids = [label for label in label_list if label not in (
             train_set + test_set)]
         
         msg_mgr = get_msg_mgr()
-        # 写 pid list 信息到 console/file
+        # write pid list info to console/ logs file
         def log_pid_list(pid_list):
             if len(pid_list) >= 3:
                 msg_mgr.log_info('[%s, %s, ..., %s]' %
@@ -128,7 +128,7 @@ class DataSet(tordata.Dataset):
             log_pid_list(test_set)
 
 
-        #  返回 seqs_info_list 。例: seqs_info_list[0] = ['001', 'bg-01', '000', ['./001/bg-01/000/000-rgbs.pkl', './001/bg-01/000/000-sils.pkl', '...']] 
+        #  return seqs_info_list. eg: seqs_info_list[0] = ['001', 'bg-01', '000', ['./001/bg-01/000/000-rgbs.pkl', './001/bg-01/000/000-sils.pkl', '...']] 
         def get_seqs_info_list(label_set):
             seqs_info_list = [] 
             for lab in label_set:

@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch.autograd import Function
 
 
-# 反向传播时，梯度取反
+# When backward, the gradient is taken to be inverse
 class GradReverse(Function):
     def forward(self, x):
         return x
@@ -12,7 +12,7 @@ class GradReverse(Function):
         return (-grad_output)
 
 
-# 反向传播时，梯度取反
+# When backward, the gradient is taken to be inverse
 def grad_reverse(x):
     return GradReverse()(x)
 
@@ -28,7 +28,8 @@ class Discriminator(nn.Module):
         self.conv3 = nn.Conv2d(in_channels=outputs_size, out_channels=2, kernel_size=1, stride=1, bias=True)
 
     def forward(self, x):
-        x = x[:,:,None,None]
+        # Are all input variables x of dimension 2?
+        x = x[:,:,None,None] # Add one dimension to the third and fourth dimensions respectively
         out = F.relu(self.conv1(x))
         out = F.relu(self.conv2(out))
         out = F.relu(self.conv3(out))
@@ -44,7 +45,7 @@ class Discriminators(nn.Module):
     
     def forward(self, x):
         if self.grl == True:
-            # 反向传播时，梯度取反
+            # When backward, the gradient is taken to be inverse
             out = [self.discriminators[i](grad_reverse(x[i])) for i in range(len(self.discriminators))]
         else:
             out = [self.discriminators[i](x[i]) for i in range(len(self.discriminators))]

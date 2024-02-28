@@ -22,22 +22,21 @@ parser.add_argument('--log_to_file', action='store_true', help="log to file, def
 args = parser.parse_args()
 
 
-
 # init SummaryWriter and logger(to tensorboard, console and file print log info)， random seeds
 def init(cfgs, training):
-    # get MessageManager class的实例对象
+    # get MessageManager instance
     msg_mgr = get_msg_mgr()
     engine_cfg = cfgs['trainer_cfg'] if training else cfgs['evaluator_cfg'] 
 
     output_path = os.path.join('output/', cfgs['data_cfg']['dataset_name'], 'Student_'+ cfgs['model_cfg']['student'], engine_cfg['save_name'])
     if training:
-        # init SummaryWriter 和 logger
+        # init SummaryWriter and logger
         msg_mgr.init_manager(output_path, args.log_to_file, engine_cfg['log_iter'],
                              engine_cfg['restore_hint'] if isinstance(engine_cfg['restore_hint'], (int)) else 0)
     else:
         # init logger
         msg_mgr.init_logger(output_path, args.log_to_file)
-    # write trainer or evaluator config info to console/file 
+    # write trainer or evaluator config info to console/logs file 
     msg_mgr.log_info(engine_cfg)
 
     seed = torch.distributed.get_rank()
@@ -49,7 +48,7 @@ def run_model(cfgs, training):
 
     model = BuildModel(cfgs, training)
     
-    # if True, 应用 Batch Normalization synchronously， 通常在分布式训练中使用，以确保不同 GPU 上的批量归一化参数同步
+    # if True, appliance Batch Normalization Synchronously, usually used in distributed training to ensure batch normalisation parameters on different GPUs are synchronised
     if training and cfgs['trainer_cfg']['sync_BN']:
         model.student = nn.SyncBatchNorm.convert_sync_batchnorm(model.student)
         # for teacher in model.teachers:
@@ -65,7 +64,7 @@ def run_model(cfgs, training):
         for discriminator in model.discriminators.discriminators:
             model.fix_BN(discriminator)
 
-    # 返回一个经过分布式数据并行 (DDP) 化处理的model   
+    # Return a model that has been distributed data parallelised (DDP). 
     find_unused_parameters = cfgs['trainer_cfg']['find_unused_parameters']
     model.student = get_ddp_module(model.student, find_unused_parameters)
     # DistributedDataParallel is not needed when a module doesn't have any parameter that requires a gradient.
@@ -87,8 +86,6 @@ if __name__ == '__main__':
     if torch.distributed.get_world_size() != torch.cuda.device_count():
         raise ValueError("Expect number of available GPUs({}) equals to the world size({}).".format(
             torch.cuda.device_count(), torch.distributed.get_world_size()))
-    
-    # torch.backends.cudnn.enabled = False
     
     # Load Config File
     with open(args.cfgs, 'r') as stream:

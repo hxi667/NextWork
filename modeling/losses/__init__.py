@@ -2,32 +2,33 @@ from inspect import isclass
 from pkgutil import iter_modules
 from pathlib import Path
 from importlib import import_module
-from .l1soft import L1_soft
-from .l2soft import L2_soft
+from .l1_soft import L1_soft
+from .l2_soft import L2_soft
 from .CE import CrossEntropy
 
 import torch.nn.functional as F
 
 '''
-    动态地导入当前包中的所有modules, 并将每个modules中的类添加到当前包的全局变量中
+    Dynamically import all the modules in the current package,
+    and add the classes in each module to the global variables of the current package.
 '''
 
-# 获取当前脚本所在的目录
+# Get the directory where the current script is located
 package_dir = Path(__file__).resolve().parent
-# 遍历当前软件包中的所有modules
+# Iterate all the modules in the current package
 for (_, module_name, _) in iter_modules([str(package_dir)]):
 
-     # 动态导入module
+    # Dynamic import of modules
     module = import_module(f"{__name__}.{module_name}")
-    # 遍历导入的module中的所有属性attributes的名称
+    # Iterate the names of all attributes in the imported module
     for attribute_name in dir(module):
         attribute = getattr(module, attribute_name)
 
         if isclass(attribute):
-            # 将该类添加到当前包的全局变量中，以类的名称为键
+            # Add the class to the current package's global variables, keyed by the class name
             globals()[attribute_name] = attribute
 
-loss_map = {"L1": F.l1_loss,
+loss_zoo = {"L1": F.l1_loss,
             "L2": F.mse_loss,
             "L1_soft": L1_soft,
             'L2_soft': L2_soft,
@@ -35,7 +36,7 @@ loss_map = {"L1": F.l1_loss,
 
 
 def get_loss(loss):
-    if loss in loss_map:
-        return loss_map[loss]
+    if loss in loss_zoo:
+        return loss_zoo[loss]
     else:
         raise NotImplementedError

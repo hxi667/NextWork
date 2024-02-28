@@ -19,7 +19,7 @@
                 "4",
                 "main.py",
                 "--cfgs",
-                "./configs/gaitgl/student_gaitgl.yaml",
+                "./configs/gaitgl/student_GaitGL_CASIAB.yaml",
                 "--phase",
                 "train",
                 "--log_to_file",

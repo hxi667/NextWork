@@ -98,7 +98,7 @@ class BuildModel():
 
         restore_hint = self.engine_cfg['restore_hint']
         if restore_hint != 0:
-            # 从 checkpoint 恢复
+            # resume checkpoint
             self.resume_ckpt(restore_hint, self.student)
 
         # count teachers and discriminators parameters
@@ -110,17 +110,17 @@ class BuildModel():
         # ================= Loss Function Setup ================ #
         if self.training:
             # for student
-            # 如果有多个 losses， 返回由多个损失组成的 ModuleDict
+            # If there are multiple loss, return a ModuleDict consisting of multiple loss
             self.loss_aggregator = LossAggregator(cfgs['loss_cfg'])
             
             # for Generator
-            loss_generator = get_loss(cfgs['loss_map']['loss'])
+            loss_generator = get_loss(cfgs['loss_zoo']['loss'])
             # loss between student and teacher
-            self.between_criterion = betweenLoss(cfgs['loss_map']['gamma'], loss=loss_generator)
+            self.between_criterion = betweenLoss(cfgs['loss_zoo']['gamma'], loss=loss_generator)
 
             # for Discriminator
             if cfgs['model_cfg']['discriminator']['adv']:
-                self.discriminators_criterion = discriminatorLoss(self.discriminators, cfgs['loss_map']['eta'], enable_float16=self.engine_cfg['enable_float16'])
+                self.discriminators_criterion = discriminatorLoss(self.discriminators, cfgs['loss_zoo']['eta'], enable_float16=self.engine_cfg['enable_float16'])
             else:
                 self.discriminators_criterion = discriminatorFakeLoss() # FakeLoss
             
@@ -158,16 +158,16 @@ class BuildModel():
         # DataSet
         dataset = DataSet(data_cfg, train)
         
-        # 从 Samplers 包中获取名为 sampler_cfg['type'] 的 Samplers 类 
+        # Get the Samplers class named sampler_cfg['type'] from the Samplers package 
         Sampler = get_attr_from([Samplers], sampler_cfg['type'])
         vaild_args = get_valid_args(Sampler, sampler_cfg, free_keys=[
             'sample_type', 'type'])
-        # 实例化这个 Sampler 类
+        # Instantiate this Sampler class
         sampler = Sampler(dataset, **vaild_args)
 
         loader = tordata.DataLoader(
             dataset=dataset,
-            batch_sampler=sampler, # batch_sampler: 每次返回一个批次的索引
+            batch_sampler=sampler, # batch_sampler: Returns the index of one batch at a time
             collate_fn=CollateFn(dataset.label_set, sampler_cfg),
             num_workers=data_cfg['num_workers'])
         return loader
@@ -175,10 +175,10 @@ class BuildModel():
     # get optimizer
     def get_optimizer(self, update_parameters, optimizer_cfg):
         self.msg_mgr.log_info(optimizer_cfg)
-        # 从 optim 包中获取名为 optimizer_cfg['solver'] 的 Optimizer 类 
+        # Get the Optimizer class named optimizer_cfg['solver'] from the optim package 
         optimizer = get_attr_from([optim], optimizer_cfg['solver'])
         valid_arg = get_valid_args(optimizer, optimizer_cfg, ['solver'])
-        # 实例化这个 Optimizer 类
+        # Instantiate this Optimizer class
         optimizer = optimizer(
             update_parameters, **valid_arg)
             # filter(lambda p: p.requires_grad, self.parameters()), **valid_arg)
@@ -187,11 +187,11 @@ class BuildModel():
     # get scheduler
     def get_scheduler(self, scheduler_cfg):
         self.msg_mgr.log_info(scheduler_cfg)
-        # 从 optim.lr_scheduler 包中获取名为 scheduler_cfg['scheduler'] 的 Scheduler 类 
+        # Get the Scheduler class named scheduler_cfg['scheduler'] from the optim.lr_scheduler package 
         Scheduler = get_attr_from(
             [optim.lr_scheduler], scheduler_cfg['scheduler'])
         valid_arg = get_valid_args(Scheduler, scheduler_cfg, ['scheduler'])
-        # 实例化这个 Scheduler 类
+        # Instantiate this Scheduler class
         scheduler = Scheduler(self.optimizer, **valid_arg)
         return scheduler
     
@@ -200,7 +200,7 @@ class BuildModel():
         if torch.distributed.get_rank() == 0:
             mkdir(osp.join(self.save_path, "checkpoints/"))
             save_name = self.engine_cfg['save_name']
-            model_state_dict = model.module.state_dict() #if self.is_parallel else model.state_dict()
+            model_state_dict = model.module.state_dict() # if self.is_parallel else model.state_dict()
             checkpoint = {
                 'model': model_state_dict,
                 'optimizer': self.optimizer.state_dict(),
@@ -218,8 +218,8 @@ class BuildModel():
             "cuda", self.device))
         model_state_dict = checkpoint['model']
 
-        # 如果 not load_ckpt_strict 为 True，即不是严格检查checkpoint是否与定义的模型相同，
-        # 则找到两个模型状态字典中共有的参数键，并将它们按照某个规则排序后打印输出
+        # if not load_ckpt_strict is True, not strictly checking that the checkpoint is the same as the module of the defined model,
+        # Find the keys that are common to both model state dictionaries and print them out after ordering them 
         if not load_ckpt_strict:
             self.msg_mgr.log_info("-------- Restored Params List --------")
             self.msg_mgr.log_info(sorted(set(model_state_dict.keys()).intersection(
@@ -249,7 +249,7 @@ class BuildModel():
             save_name = osp.join(
                 self.save_path, 'checkpoints/{}-{:0>5}.pt'.format(save_name, restore_hint))
             self.iteration = restore_hint
-        # 也可以直接指定 checkpoint 文件的目录
+        # You can also specify the directory of the checkpoint file directly
         elif isinstance(restore_hint, str):
             save_name = restore_hint
             self.iteration = 0
@@ -265,7 +265,7 @@ class BuildModel():
             if classname.find('BatchNorm') != -1:
                 module.eval()
     
-    # 对输入数据 inputs 进行 transforms
+    # transforms the input data
     def inputs_pretreament(self, inputs, training):
         """Conduct transforms on input data.
 
@@ -289,7 +289,7 @@ class BuildModel():
         
         requires_grad = bool(training)
         
-        # 一个 transform 实例（single 或 compose ）对应一个序列类型
+        # A transform instance (single or compose) corresponds to a sequence type
         # seqs -> [torch.Size([batch, seqL, 3, 128, 128]), torch.Size([batch, seqL, 128, 128]), ...]
         seqs = [np2var(np.asarray([trf(fra) for fra in seq]), requires_grad=requires_grad).float()
                 for trf, seq in zip(seq_trfs, seqs_batch)]
@@ -312,10 +312,10 @@ class BuildModel():
         # labs -> tensor([1, ...]
         # typs -> ['bg-01', ...]
         # vies -> ['000', ...]
-        # seqL -> 如果为 fixed -> 则为 None, 如果为 unfixed -> np.asarray: seq length of each batch 
+        # seqL -> if fixed -> None, if unfixed -> np.asarray: seq length of each batch 
         return ipts, labs, typs, vies, seqL
 
-    # 进行 loss_sum.backward(), self.optimizer.step() and self.scheduler.step()
+    # exec loss_sum.backward(), self.optimizer.step() and self.scheduler.step()
     def train_step(self, loss_sum) -> bool:
         """Conduct loss_sum.backward(), self.optimizer.step() and self.scheduler.step().
 
@@ -330,14 +330,14 @@ class BuildModel():
             self.msg_mgr.log_warning(
                 "Find the loss sum less than 1e-9 but the training process will continue!")
 
-        # float16, 梯度缩放，加快训练速度
+        # float16, gradient scaling to speed up training
         if self.engine_cfg['enable_float16']:
             self.Scaler.scale(loss_sum).backward()
             self.Scaler.step(self.optimizer)
             scale = self.Scaler.get_scale()
             self.Scaler.update()
             # Warning caused by optimizer skip when NaN
-            # 当出现 NaN 时，optimizer 跳过引起的警告
+            # The optimizer skips warnings raised when NaN occurs
             # https://discuss.pytorch.org/t/optimizer-step-before-lr-scheduler-step-error-using-gradscaler/92930/5
             if scale != self.Scaler.get_scale():
                 self.msg_mgr.log_debug("Training step skip. Expected the former scale equals to the present, got {} and {}".format(
@@ -367,19 +367,19 @@ class BuildModel():
             pbar = NoOp()
         batch_size = self.test_loader.batch_sampler.batch_size
         rest_size = total_size
-        # info_dict: 推理的结果
+        # info_dict: The result of the inference
         info_dict = Odict()
     
         for inputs in self.test_loader:
-            # 对输入数据 inputs 进行 transforms
+            # Transforms the input data
             ipts = self.inputs_pretreament(inputs, training=False)
             with autocast(enabled=self.engine_cfg['enable_float16']):
-                # model 推理
-                # 调用 model 子类的 "forward" 方法
+                # model inference
+                # Calling the "forward" method of a subclass of model
                 retval = self.student(ipts, training=False)
                 inference_feat = retval['inference_feat']
                 for k, v in inference_feat.items():
-                    # 分布式
+                    # distributed
                     inference_feat[k] = ddp_all_gather(v, requires_grad=False)
                 del retval
             for k, v in inference_feat.items():
@@ -408,7 +408,7 @@ class BuildModel():
         # inputs[4] -> batch[4] ->->  如果为fixed -> 则为None, 如果为 unfixed -> np.asarray: seq length of each batch 
         for inputs in model.train_loader:
             
-            # 对输入数据进行 transforms
+            # Transforms the input data
             # len(ipts): 5
             ipts = model.inputs_pretreament(inputs, training=True)
             with autocast(enabled=model.engine_cfg['enable_float16']):
@@ -440,7 +440,7 @@ class BuildModel():
         
             ok = model.train_step(total_loss)
             if not ok:
-                # 跳出当前循环
+                # jump out of the current loop
                 continue
             
             loss_info = student_loss_info
@@ -452,7 +452,7 @@ class BuildModel():
             model.msg_mgr.train_step(loss_info, visual_summary)
             
             if model.iteration % model.engine_cfg['save_iter'] == 0:
-                # 保存 checkpoint
+                # save checkpoint
                 model.save_ckpt(model.student, model.iteration)
 
                 # 如果 "with_test" 为 true， 运行 test 步骤
@@ -495,7 +495,7 @@ class BuildModel():
                 eval_func = model.cfgs['evaluator_cfg']["eval_func"]
             else:
                 eval_func = 'identification'
-            # 获取 evaluate 函数
+            # Get the evaluate function
             eval_func = getattr(eval_functions, eval_func)
             valid_args = get_valid_args(
                 eval_func, model.cfgs["evaluator_cfg"], ['metric'])
@@ -504,7 +504,7 @@ class BuildModel():
                 dataset_name = model.cfgs['data_cfg']['test_dataset_name']
             except:
                 dataset_name = model.cfgs['data_cfg']['dataset_name']
-            # 评估
+            # evaluate
             return eval_func(info_dict, dataset_name, **valid_args)
     
 

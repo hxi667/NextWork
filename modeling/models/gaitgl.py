@@ -252,7 +252,7 @@ class GaitGL(nn.Module):
         return retval
 
 
-def gaitGL(model_cfg):
+def gaitGL_CASIAB(model_cfg):
 
     gaitGL_cfg = {
         'channels': [32, 64, 128],

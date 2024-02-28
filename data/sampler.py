@@ -13,7 +13,7 @@ class TripletSampler(tordata.sampler.Sampler):
             raise ValueError(
                 "batch_size should be (P x K) not {}".format(batch_size))
         self.batch_shuffle = batch_shuffle
-        # 当前进程组中的进程数
+        # number of processes in the current process group
         self.world_size = dist.get_world_size()
         if (self.batch_size[0]*self.batch_size[1]) % self.world_size != 0:
             raise ValueError("World size ({}) is not divisible by batch_size ({} x {})".format(
@@ -23,14 +23,14 @@ class TripletSampler(tordata.sampler.Sampler):
     def __iter__(self):
         while True:
             sample_indices = []
-            # 从 self.dataset.label_set 中随机选择 self.batch_size[0] 个
-            # 例: ['013', '014', '068', '010', '048', '056', '016', '051']
+            # Randomly select self.batch_size[0] subjects from self.dataset.label_set
+            # eg: ['013', '014', '068', '010', '048', '056', '016', '051']
             pid_list = sync_random_sample_list(
                 self.dataset.label_set, self.batch_size[0])
 
             for pid in pid_list:
                 indices = self.dataset.indices_dict[pid]
-                # 从 self.dataset.indices_dict[pid] 中随机选择 self.batch_size[1] 个
+                # Randomly select self.batch_size[1] from self.dataset.indices_dict[pid]
                 indices = sync_random_sample_list(
                     indices, k=self.batch_size[1])
                 sample_indices += indices
@@ -47,7 +47,7 @@ class TripletSampler(tordata.sampler.Sampler):
 
             sample_indices = sample_indices[self.rank:total_size:self.world_size]
             
-            # 例: len(sample_indices) -> batch_size[0] * batch_size[1] / gpus number
+            # eg: len(sample_indices) -> batch_size[0] * batch_size[1] / gpus number
             # sample_indices -> [1484, 5540, 1517, 1410, 1336, 5575, 1446, 6061, 7386, 1017, 6077, 5255, 1670, 1662, ...]
             yield sample_indices
 
@@ -55,7 +55,7 @@ class TripletSampler(tordata.sampler.Sampler):
         return len(self.dataset)
 
 
-# 从 obj_list 中随机选择 k 个
+# Randomly select k from obj_list
 def sync_random_sample_list(obj_list, k, common_choice=False):
     if common_choice:
         idx = random.choices(range(len(obj_list)), k=k) 

@@ -21,7 +21,7 @@ class discriminatorLoss(nn.Module):
         return res
     
     
-# 未添加鉴别器时的假loss
+# False loss when no discriminator is added
 class discriminatorFakeLoss(nn.Module):
     def forward(self, outputs, targets):
         res = (0*outputs[0]).sum()

@@ -210,7 +210,7 @@ def clones(module, N):
     return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
 
 
-# 初始化随机种子
+# init random seed
 def init_seeds(seed=0, cuda_deterministic=True):
     random.seed(seed)
     np.random.seed(seed)
@@ -225,7 +225,7 @@ def init_seeds(seed=0, cuda_deterministic=True):
         torch.backends.cudnn.benchmark = True
 
 
-# 分布式
+# distributed
 def ddp_all_gather(features, dim=0, requires_grad=True):
     '''
         在分布式训练环境中实现 All-Gather 操作，确保每个设备上的模型都有完整的数据集信息

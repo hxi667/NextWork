@@ -59,7 +59,7 @@ class BaseRgbTransform():
 
 
 # **************** Data Agumentation ****************
-# random horizontal flip水平翻转
+# random horizontal flip 水平翻转
 class RandomHorizontalFlip(object):
     def __init__(self, prob=0.5):
         self.prob = prob
@@ -71,7 +71,7 @@ class RandomHorizontalFlip(object):
             return seq[..., ::-1]
 
 
-# random erasing擦除
+# random erasing 擦除
 class RandomErasing(object):
     def __init__(self, prob=0.5, sl=0.05, sh=0.2, r1=0.3, per_frame=False):
         self.prob = prob
@@ -110,7 +110,7 @@ class RandomErasing(object):
             return np.concatenate(ret, 0)
 
 
-# random rotate旋转
+# random rotate 旋转
 class RandomRotate(object):
     def __init__(self, prob=0.5, degree=10):
         self.prob = prob
@@ -132,7 +132,7 @@ class RandomRotate(object):
             return seq
 
 
-# random perspective透视
+# random perspective 透视
 class RandomPerspective(object):
     def __init__(self, prob=0.5):
         self.prob = prob
@@ -160,7 +160,7 @@ class RandomPerspective(object):
             return seq
 
 
-#  random affine仿射
+#  random affine 仿射
 class RandomAffine(object):
     def __init__(self, prob=0.5, degree=10):
         self.prob = prob
@@ -189,26 +189,26 @@ class RandomAffine(object):
 # ******************************************
 
 
-# 将多个 transform 组合在一起
+# Combine multiple transforms
 def Compose(trf_cfg):
     assert is_list(trf_cfg)
     transform = T.Compose([get_transform(cfg) for cfg in trf_cfg])
     return transform
 
 
-# 实例化单个 transform 类或多个transform 类 list
+# Instantiate a single transform class or a list of multiple transform classes
 def get_transform(trf_cfg=None):
     if is_dict(trf_cfg):
-        # 从 base_transform 包中获取名为 trf_cfg['type'] 的类或方法
+        # Get the class or method named trf_cfg['type'] from the base_transform package
         transform = getattr(base_transform, trf_cfg['type'])
         valid_trf_arg = get_valid_args(transform, trf_cfg, ['type'])
-        # 返回实例化的 transform 类
+        # Return the instantiated transform class
         return transform(**valid_trf_arg)
     if trf_cfg is None:
         return lambda x: x
-    # 针对多个数据类型
+    # For multiple data types
     if is_list(trf_cfg):
         transform = [get_transform(cfg) for cfg in trf_cfg]
-        # 返回实例化的多个 transform 类list
+        # Return a list of multiple instantiated transformation classes.
         return transform
     raise "Error type for -Transform-Cfg-"

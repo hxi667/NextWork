@@ -11,27 +11,27 @@ from .common import is_list, is_tensor, ts2np, mkdir, Odict, NoOp
 import logging
 
 
-# 设置 SummaryWriter 和 logger, 输出logs到 tensorboard, console and file的类
+# The class of setting SummaryWriter and logger, and output logs to tensorboard, console and  logs file 
 class MessageManager:
     def __init__(self):
         self.info_dict = Odict()
-        self.writer_hparams = ['image', 'scalar'] # tensorboard的参数
+        self.writer_hparams = ['image', 'scalar'] # parameters of tensorboard
         self.time = time.time()
     
-    # 初始化 SummaryWriter 和 logger
+    # init SummaryWriter and logger
     def init_manager(self, save_path, log_to_file, log_iter, iteration=0):
         self.iteration = iteration
         self.log_iter = log_iter
         mkdir(osp.join(save_path, "summary/"))
-        # 初始化 SummaryWriter, 输出logs 到 tensorboard
+        # init SummaryWriter, output logs to tensorboard
         self.writer = SummaryWriter(
             osp.join(save_path, "summary/"), purge_step=self.iteration)
-        # 初始化 logger, 输出logs 到 console 和 log 文件
+        # init logger, output logs to console and logs file
         self.init_logger(save_path, log_to_file)
 
-    # 初始化 logger, 输出logs 到 console 和 log 文件
+    # init logger, output logs to console and logs file
     def init_logger(self, save_path, log_to_file):
-        # 初始化 logger
+        # init logger
         self.logger = logging.getLogger('Gait_Gait')
         self.logger.setLevel(logging.INFO)
         self.logger.propagate = False
@@ -50,7 +50,7 @@ class MessageManager:
         console.setLevel(logging.DEBUG)
         self.logger.addHandler(console)
 
-    # 添加 info 到 info_dict
+    # append info to info_dict
     def append(self, info):
         for k, v in info.items():
             v = [v] if not is_list(v) else v
@@ -58,12 +58,12 @@ class MessageManager:
             info[k] = v
         self.info_dict.append(info)
 
-    # 刷新 info_dict 到 磁盘
+    # refresh info_dict to disk
     def flush(self):
         self.info_dict.clear()
         self.writer.flush()
 
-    # 写 summary 到 tensorboard
+    # write summary to tensorboard
     def write_to_tensorboard(self, summary):
 
         for k, v in summary.items():
@@ -84,7 +84,7 @@ class MessageManager:
                     v = v
             writer_module(board_name, v, self.iteration)
 
-    # 写 training info 到 log
+    # write training info to log
     def log_training_info(self):
         now = time.time()
         string = "Iteration {:0>5}, Cost {:.2f}s".format(
@@ -98,11 +98,11 @@ class MessageManager:
         self.log_info(string)
         self.reset_time()
 
-    # 重置 time 为当前 
+    # reset time to current time 
     def reset_time(self):
         self.time = time.time()
 
-    # 写训练时 step 的 "loss_info" 和 "visual_summary" 信息到 log 和 tensorboard
+    # When training, write "loss_info" and "visual_summary" info at every step to log and tensorboard 
     def train_step(self, info, summary):
         self.iteration += 1
         self.append(info)
@@ -111,25 +111,25 @@ class MessageManager:
             self.flush()
             self.write_to_tensorboard(summary)
 
-    # 写 DEBUG level 信息到 console/file
+    # write DEBUG level info to console/logs file
     def log_debug(self, *args, **kwargs):
         self.logger.debug(*args, **kwargs)
 
-    # 写 INFO level 信息到 console/file
+    # write INFO level info to console/logs file
     def log_info(self, *args, **kwargs):
         self.logger.info(*args, **kwargs)
 
-    # 写 WARNING level 信息到 console/file
+    # write WARNING level info to console/logs file
     def log_warning(self, *args, **kwargs):
         self.logger.warning(*args, **kwargs)
 
 
-# 实例化 MessageManager 类
+# instance MessageManager class
 msg_mgr = MessageManager()
 noop = NoOp()
 
 
-# 返回 MessageManager 实例
+# return MessageManager instance
 def get_msg_mgr():
     if torch.distributed.get_rank() > 0:
         return noop

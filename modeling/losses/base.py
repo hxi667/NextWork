@@ -30,9 +30,7 @@ class BaseLoss(nn.Module):
     Base class for all losses.
 
     Your loss should also subclass this class.
-    所有 losses 的基类。
 
-    自建的 loss 也应该继承这个基类
     """
 
     def __init__(self, loss_term_weight=1.0):

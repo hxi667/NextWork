@@ -62,7 +62,7 @@ loss_cfg:
     label_smooth: false
     log_prefix: softmax
 
-loss_map:
+loss_zoo:
   loss: CE
   gamma:
     - 1

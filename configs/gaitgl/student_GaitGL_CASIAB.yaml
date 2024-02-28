@@ -64,8 +64,8 @@ loss_cfg:
     log_prefix: softmax
 
 
-loss_map:
-  loss: CE
+loss_zoo:
+  loss: CE # L1/L2/L1_soft/L2_soft/CE
   gamma:
     - 1
     - 1
@@ -101,7 +101,7 @@ scheduler_cfg:
 
 
 model_cfg:
-  student: GaitGL
+  student: GaitGL_CASIAB
   teachers:
     - name: GaitSet
       restore_hint: 40000
@@ -123,12 +123,12 @@ model_cfg:
   fc_out: true # if immediate output from fc-layer
   pool_out: max  # the type of pooling layer of output, max or avg
   out_layer:
-    - -1
-    # - 0
-    # - 1
-    # - 2
-    # - 3
-    # - 4
+    # - -1
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
   out_dims: # the dims of output pooling layers
     - 5000
     - 1000
