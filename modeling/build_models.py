@@ -405,7 +405,7 @@ class BuildModel():
         # inputs[1] -> [1, ...]
         # inputs[2] -> ['bg-01', ...]
         # inputs[3] -> ['000', ...]
-        # inputs[4] -> batch[4] ->->  如果为fixed -> 则为None, 如果为 unfixed -> np.asarray: seq length of each batch 
+        # inputs[4] -> batch[4] ->->  if fixed -> None, if unfixed -> np.asarray: seq length of each batch 
         for inputs in model.train_loader:
             
             # Transforms the input data
@@ -444,10 +444,10 @@ class BuildModel():
                 continue
             
             loss_info = student_loss_info
-            loss_info['scalar/between/loss']= between_loss
-            loss_info['scalar/discriminators/loss']= d_loss
+            loss_info['scalar/between/loss'] = between_loss
+            loss_info['scalar/discriminators/loss'] = d_loss
             
-            visual_summary.update(loss_info) # 更新 "loss_info" to "visual_summary" dict
+            visual_summary.update(loss_info) # update "loss_info" to "visual_summary" dict
             visual_summary['scalar/learning_rate'] = model.optimizer.param_groups[0]['lr']
             model.msg_mgr.train_step(loss_info, visual_summary)
             
@@ -455,7 +455,7 @@ class BuildModel():
                 # save checkpoint
                 model.save_ckpt(model.student, model.iteration)
 
-                # 如果 "with_test" 为 true， 运行 test 步骤
+                # if "with_test" is True， run test step
                 if model.engine_cfg['with_test']:
                     model.msg_mgr.log_info("Running test...")
                     model.student.eval()

@@ -3,7 +3,7 @@ data_cfg:
   dataset_root: /root/data5/hxi/GaitRecognition/GaitDB/CASIA-B/CASIA-B-pkl
   dataset_partition: ./datasets/CASIA-B/CASIA-B.json
   num_workers: 0
-  # remove_no_gallery: false
+  remove_no_gallery: false
   test_dataset_name: CASIA-B
   cache: true
 
@@ -81,14 +81,14 @@ loss_zoo:
 
 
 optimizer_cfg:
-  # lr: 1.0e-4
-  # solver: Adam
-  # weight_decay: 5.0e-4 
-  lr: 0.1
-  momentum: 0.9
-  weight_decay: 5.0e-4
-  nesterov: true
-  solver: SGD
+  lr: 1.0e-4
+  solver: Adam
+  weight_decay: 5.0e-4 
+  # lr: 0.1
+  # momentum: 0.9
+  # weight_decay: 5.0e-4
+  # nesterov: true
+  # solver: SGD
 
 
 scheduler_cfg:
@@ -119,16 +119,16 @@ model_cfg:
   discriminator:  
     adv: true  # add discriminator or not
     grl: false  # 反向传播时，梯度取反
-    d_lr: 0.1 # discriminator learning rate
+    d_lr: 1.0e-3 # discriminator learning rate
   fc_out: true # if immediate output from fc-layer
-  pool_out: max  # the type of pooling layer of output, max or avg
+  pool_out: avg  # the type of pooling layer of output, max or avg
   out_layer:
-    # - -1
-    - 0
-    - 1
-    - 2
-    - 3
-    - 4
+    - -1
+    # - 0
+    # - 1
+    # - 2
+    # - 3
+    # - 4
   out_dims: # the dims of output pooling layers
     - 5000
     - 1000
