@@ -65,7 +65,7 @@ loss_cfg:
 
 
 loss_zoo:
-  loss: CE # L1/L2/L1_soft/L2_soft/CE
+  loss: L1 # L1/L2/L1_soft/L2_soft/CE
   gamma:
     - 1
     - 1
