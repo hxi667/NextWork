@@ -118,7 +118,7 @@ model_cfg:
   teacher_eval: false  # use teacher.eval() or not
   discriminator:  
     adv: true  # add discriminator or not
-    grl: false  # 反向传播时，梯度取反
+    grl: false  # When backward, the gradient is taken to be inverse
     d_lr: 1.0e-3 # discriminator learning rate
   fc_out: true # if immediate output from fc-layer
   pool_out: avg  # the type of pooling layer of output, max or avg

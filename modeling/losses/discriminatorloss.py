@@ -3,6 +3,12 @@ import torch.nn as nn
 from torch.cuda.amp import autocast
 
 class discriminatorLoss(nn.Module):
+    '''
+    nn.BCEWithLogitsLoss():
+        Loss function for binary classification problems. It combines the binary cross-entropy loss and the sigmoid function to compute the loss more efficiently for binary classification tasks.
+    
+    '''
+
     def __init__(self, models, eta=[1, 1, 1, 1, 1], enable_float16=False, loss=nn.BCEWithLogitsLoss(), ):
         super(discriminatorLoss, self).__init__()
         self.models = models
