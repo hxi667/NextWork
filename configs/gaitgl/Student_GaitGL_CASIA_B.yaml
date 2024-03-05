@@ -12,13 +12,14 @@ trainer_cfg:
   find_unused_parameters: false
   enable_float16: true
   with_test: true
+  wandb: true
   log_iter: 100
   restore_ckpt_strict: true # If True, check whether the checkpoint is the same as the defined model.
   restore_hint: 0
   optimizer_reset: false
   scheduler_reset: false
   save_iter: 10000
-  save_name: GaitGL
+  save_name: GaitGL-CE
   sync_BN: true
   fix_BN: false
   total_iter: 80000
@@ -38,8 +39,8 @@ trainer_cfg:
 evaluator_cfg:
   enable_float16: false
   restore_ckpt_strict: true
-  restore_hint: 10000
-  save_name: GaitGL
+  restore_hint: 80000
+  save_name: GaitGL-CE
   eval_func: evaluate_indoor_dataset
   sampler:
     batch_size: 4 # the batch_size should be equal to the gpus number at the test phase!!!
@@ -49,6 +50,7 @@ evaluator_cfg:
     - type: BaseSilCuttingTransform
   metric: euc # cos
   cross_view_gallery: false
+
 
 
 loss_cfg:
@@ -65,7 +67,7 @@ loss_cfg:
 
 
 loss_zoo:
-  loss: L1 # L1/L2/L1_soft/L2_soft/CE
+  loss: CE # L1/L2/L1_soft/L2_soft/CE
   gamma:
     - 1
     - 1
@@ -101,7 +103,7 @@ scheduler_cfg:
 
 
 model_cfg:
-  student: GaitGL_CASIAB
+  student: GaitGL_CASIA_B
   teachers:
     - name: GaitSet
       restore_hint: 40000

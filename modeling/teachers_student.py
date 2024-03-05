@@ -1,6 +1,6 @@
 import torch
 
-from modeling.models import gaitGL_CASIAB, gaitSet, gaitPart, baseline_ResNet9
+from modeling.models import gaitGL_CASIA_B, gaitSet, gaitPart, baseline_ResNet9
 import numpy as np
 
 from utils.msg_manager import get_msg_mgr
@@ -49,7 +49,7 @@ def get_teachers_student(model_cfg, dataset_name, device):
 
     model_map = {"GaitSet": gaitSet,
                  "GaitPart": gaitPart,
-                 "GaitGL_CASIAB": gaitGL_CASIAB,
+                 "GaitGL_CASIA_B": gaitGL_CASIA_B,
                  'Baseline_ResNet9': baseline_ResNet9}
     
     # Student setup

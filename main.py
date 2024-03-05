@@ -6,10 +6,14 @@ import argparse
 import torch
 import torch.nn as nn
 import datetime
+import wandb
+
 from modeling.build_models import BuildModel
 
 from utils.common import init_seeds, get_ddp_module
 from utils.msg_manager import get_msg_mgr
+
+
 
 
 # ================= Arugments ================ #
@@ -33,9 +37,18 @@ def init(cfgs, training):
         # init SummaryWriter and logger
         msg_mgr.init_manager(output_path, args.log_to_file, engine_cfg['log_iter'],
                              engine_cfg['restore_hint'] if isinstance(engine_cfg['restore_hint'], (int)) else 0)
+        
+        if engine_cfg['wandb']:
+            # start a new wandb run to track this script
+            wandb.init(            
+            # track hyperparameters and run metadata
+            config=cfgs
+            )
+
     else:
         # init logger
         msg_mgr.init_logger(output_path, args.log_to_file)
+
     # write trainer or evaluator config info to console/logs file 
     msg_mgr.log_info(engine_cfg)
 
@@ -93,9 +106,12 @@ if __name__ == '__main__':
 
     training = (args.phase == 'train')
 
-    # Init SummaryWriter, Logger and Random Seeds 
+    # Init SummaryWriter Wandb, Logger and Random Seeds 
     init(cfgs, training)
 
     # Run model
     run_model(cfgs, training)
+
+    if cfgs['trainer_cfg']['wandb']:
+        wandb.finish()
     

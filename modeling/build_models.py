@@ -9,6 +9,7 @@ import torch.optim as optim
 from torch.cuda.amp import autocast
 
 from tqdm import tqdm
+import wandb
 
 from utils.msg_manager import get_msg_mgr
 from utils.common import NoOp, Odict, get_valid_args, get_attr_from, np2var, list2var, ts2np
@@ -451,6 +452,9 @@ class BuildModel():
             visual_summary['scalar/learning_rate'] = model.optimizer.param_groups[0]['lr']
             model.msg_mgr.train_step(loss_info, visual_summary)
             
+            # log metrics to wandb
+            wandb.log(visual_summary)
+
             if model.iteration % model.engine_cfg['save_iter'] == 0:
                 # save checkpoint
                 model.save_ckpt(model.student, model.iteration)
