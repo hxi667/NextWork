@@ -5,6 +5,7 @@ from importlib import import_module
 from .l1_soft import L1_soft
 from .l2_soft import L2_soft
 from .CE import CrossEntropy
+from .KL import KL
 
 import torch.nn.functional as F
 
@@ -28,11 +29,15 @@ for (_, module_name, _) in iter_modules([str(package_dir)]):
             # Add the class to the current package's global variables, keyed by the class name
             globals()[attribute_name] = attribute
 
-loss_zoo = {"L1": F.l1_loss,
-            "L2": F.mse_loss,
+loss_zoo = {"L1": F.l1_loss, # MAE
+            "L2": F.mse_loss, # MSE
             "L1_soft": L1_soft,
             'L2_soft': L2_soft,
-            'CE': CrossEntropy}
+            'CE': CrossEntropy,
+            'ED': F.pairwise_distance, # European distance
+            'CS': F.cosine_similarity, # cosine_similarity
+            'KL':KL, # KL dispersion
+            } 
 
 
 def get_loss(loss):

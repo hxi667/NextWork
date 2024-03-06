@@ -4,7 +4,7 @@ import torch.nn.functional as F
 def L1_soft(outputs, targets):
     '''
     F.l1_loss: 
-        Calculation of the average of the absolute errors between the predicted and target values.
+        (MAE) Calculation of the average of the absolute errors between the predicted and target values.
 
     L1_soft:
         The F.softmax() function takes the input tensor and performs a softmax operation to convert it into a probability distribution. This means that both softmax_outputs and softmax_targets will be probability distributions with the sum of all their elements equal to one.

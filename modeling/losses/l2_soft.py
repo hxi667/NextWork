@@ -4,7 +4,7 @@ import torch.nn.functional as F
 def L2_soft(outputs, targets):
     '''
     F.mse_loss:
-        Calculation of the average of the mean squared errors between the predicted and target values.
+        (MSE) Calculation of the average of the mean squared errors between the predicted and target values.
         
         In regression tasks, F.mse_loss is commonly used to measure the difference between the model's predicted and true values. Compared to F.l1_loss, F.mse_loss is more sensitive to large errors because it uses squared error instead of absolute error. This means that F.mse_loss may be more affected if there are outliers.
     

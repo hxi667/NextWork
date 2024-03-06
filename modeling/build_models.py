@@ -453,7 +453,8 @@ class BuildModel():
             model.msg_mgr.train_step(loss_info, visual_summary)
             
             # log metrics to wandb
-            wandb.log(visual_summary)
+            if model.engine_cfg['wandb']:
+                wandb.log(visual_summary)
 
             if model.iteration % model.engine_cfg['save_iter'] == 0:
                 # save checkpoint

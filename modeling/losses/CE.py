@@ -1,6 +1,5 @@
 import torch.nn.functional as F
 
-
 def CrossEntropy(outputs, targets):
     '''
     F.log_softmax: 

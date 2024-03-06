@@ -15,7 +15,6 @@ from utils.msg_manager import get_msg_mgr
 
 
 
-
 # ================= Arugments ================ #
 parser = argparse.ArgumentParser(description='Training Gait with PyTorch')
 # parser.add_argument('--local_rank', type=int, default=0, help="passed by torch.distributed.launch module")
@@ -26,7 +25,7 @@ parser.add_argument('--log_to_file', action='store_true', help="log to file, def
 args = parser.parse_args()
 
 
-# init SummaryWriter and logger(to tensorboard, console and file print log info)， random seeds
+# init SummaryWriter, Wandb,  logger(to tensorboard, console and file print log info) and random seeds
 def init(cfgs, training):
     # get MessageManager instance
     msg_mgr = get_msg_mgr()
@@ -38,10 +37,9 @@ def init(cfgs, training):
         msg_mgr.init_manager(output_path, args.log_to_file, engine_cfg['log_iter'],
                              engine_cfg['restore_hint'] if isinstance(engine_cfg['restore_hint'], (int)) else 0)
         
+        # init wandb
         if engine_cfg['wandb']:
-            # start a new wandb run to track this script
             wandb.init(            
-            # track hyperparameters and run metadata
             config=cfgs
             )
 
@@ -106,7 +104,7 @@ if __name__ == '__main__':
 
     training = (args.phase == 'train')
 
-    # Init SummaryWriter Wandb, Logger and Random Seeds 
+    # Init SummaryWriter, Wandb, Logger and Random Seeds 
     init(cfgs, training)
 
     # Run model

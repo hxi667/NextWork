@@ -12,14 +12,14 @@ trainer_cfg:
   find_unused_parameters: false
   enable_float16: true
   with_test: true
-  wandb: true
+  wandb: false
   log_iter: 100
   restore_ckpt_strict: true # If True, check whether the checkpoint is the same as the defined model.
   restore_hint: 0
   optimizer_reset: false
   scheduler_reset: false
   save_iter: 10000
-  save_name: GaitGL-CE
+  save_name: GaitGL-KL
   sync_BN: true
   fix_BN: false
   total_iter: 80000
@@ -40,10 +40,10 @@ evaluator_cfg:
   enable_float16: false
   restore_ckpt_strict: true
   restore_hint: 80000
-  save_name: GaitGL-CE
+  save_name: GaitGL-KL
   eval_func: evaluate_indoor_dataset
   sampler:
-    batch_size: 4 # the batch_size should be equal to the gpus number at the test phase!!!
+    batch_size: 1 # the batch_size should be equal to the gpus number at the test phase!!!
     sample_type: all_ordered
     type: InferenceSampler
   transform:
@@ -67,7 +67,7 @@ loss_cfg:
 
 
 loss_zoo:
-  loss: CE # L1/L2/L1_soft/L2_soft/CE
+  loss: KL # L1/L2/L1_soft/L2_soft/CE/ED/CS/KL
   gamma:
     - 1
     - 1
@@ -111,7 +111,7 @@ model_cfg:
     - name: GaitPart
       restore_hint: 120000
       load_ckpt_strict: false
-    - name: GaitGL
+    - name: GaitGL_CASIA_B
       restore_hint: 80000
       load_ckpt_strict: false
     - name: Baseline_ResNet9
